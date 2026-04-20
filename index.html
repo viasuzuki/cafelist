@@ -728,7 +728,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   </div>
   <div class="tab" id="tab-cal" onclick="switchTab('cal')">
     <div class="tab-icon">📅</div>
-    <div>記録</div>
+    <div>日記</div>
   </div>
 </div>
 
@@ -1443,6 +1443,37 @@ async function openDetail(id){
       <button class="memo-save-btn" onclick="saveMemo('${id}')">メモを保存</button>
     </div>
 
+    <!-- 日記紐付け -->
+    <div class="memo-section" style="border-top:1px solid var(--border);padding-top:14px">
+      <div class="memo-label">📅 日記に記録</div>
+      ${(()=>{
+        const linked=calEntries.filter(e=>e.placeId===id);
+        const linkedDates=linked.map(e=>{
+          const [y,mo,d]=e.date.split('-');
+          return `<div style="display:flex;align-items:center;justify-content:space-between;
+            background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+            padding:8px 12px;margin-bottom:6px;font-size:12px">
+            <span>${y}年${parseInt(mo)}月${parseInt(d)}日</span>
+            <button onclick="unlinkFromDetail('${e.date}','${id}')"
+              style="background:transparent;border:1px solid var(--border);border-radius:6px;
+              color:var(--muted);font-size:11px;padding:3px 9px;cursor:pointer">解除</button>
+          </div>`;
+        }).join('');
+        return linkedDates||'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">紐付けなし</div>';
+      })()}
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="diary-date-input"
+          value="${new Date().toISOString().slice(0,10)}"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;
+          outline:none;-webkit-appearance:none;min-height:44px">
+        <button onclick="linkFromDetail('${id}')"
+          style="background:var(--accent);color:#000;border:none;border-radius:8px;
+          padding:9px 14px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+          cursor:pointer;white-space:nowrap;min-height:44px">＋ 追加</button>
+      </div>
+    </div>
+
     ${p.reviews&&p.reviews.length?`
     <div class="dp-section">
       <div class="dp-section-title">クチコミ</div>
@@ -1466,6 +1497,25 @@ function closeDetail(){
 // Wrappers so activeCardId is evaluated at CLICK time, not parse time
 function sheetOpenTag(){ if(activeCardId) openTagModal(activeCardId); }
 function sheetDelete(){  if(activeCardId) deletePlace(activeCardId); }
+
+// 詳細シートから日記に直接紐付け
+function linkFromDetail(placeId){
+  const dateEl=document.getElementById('diary-date-input');
+  if(!dateEl||!placeId) return;
+  const date=dateEl.value;
+  if(!date) return;
+  if(calEntries.find(e=>e.date===date&&e.placeId===placeId)) return;
+  calEntries.push({date,placeId});
+  saveCal();
+  openDetail(placeId);
+  renderCalendar();
+}
+function unlinkFromDetail(date, placeId){
+  calEntries=calEntries.filter(e=>!(e.date===date&&e.placeId===placeId));
+  saveCal();
+  openDetail(placeId);
+  renderCalendar();
+}
 
 function saveMemo(id){
   const p=places.find(x=>x.id===id);if(!p)return;
@@ -1766,17 +1816,21 @@ function fmtTypes(t){
 }
 function darkStyle(){
   return[
-    {elementType:'geometry',stylers:[{color:'#1a1a20'}]},
-    {elementType:'labels.text.fill',stylers:[{color:'#7a7a90'}]},
-    {elementType:'labels.text.stroke',stylers:[{color:'#1a1a20'}]},
-    {featureType:'road',elementType:'geometry',stylers:[{color:'#2c2c38'}]},
-    {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#38383f'}]},
-    {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#454550'}]},
-    {featureType:'water',elementType:'geometry',stylers:[{color:'#0d1b2a'}]},
-    {featureType:'poi',elementType:'geometry',stylers:[{color:'#222228'}]},
-    {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#1a2418'}]},
-    {featureType:'transit',elementType:'geometry',stylers:[{color:'#2c2c38'}]},
-    {featureType:'poi',elementType:'labels.text.fill',stylers:[{color:'#5a5a70'}]},
+    {elementType:'geometry',stylers:[{color:'#f5f5f0'}]},
+    {elementType:'labels.text.fill',stylers:[{color:'#4a4a4a'}]},
+    {elementType:'labels.text.stroke',stylers:[{color:'#ffffff'}]},
+    {featureType:'road',elementType:'geometry',stylers:[{color:'#ffffff'}]},
+    {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#f0ede8'}]},
+    {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#e8e0d0'}]},
+    {featureType:'road.highway',elementType:'geometry.stroke',stylers:[{color:'#d4c8b0'}]},
+    {featureType:'water',elementType:'geometry',stylers:[{color:'#c9e8f0'}]},
+    {featureType:'poi',elementType:'geometry',stylers:[{color:'#e8f0e8'}]},
+    {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#d4e8cc'}]},
+    {featureType:'transit',elementType:'geometry',stylers:[{color:'#e8e4dc'}]},
+    {featureType:'landscape',elementType:'geometry',stylers:[{color:'#f0ede8'}]},
+    {featureType:'administrative',elementType:'geometry.stroke',stylers:[{color:'#c0b8a8'}]},
+    {featureType:'poi',elementType:'labels.text.fill',stylers:[{color:'#6a6a5a'}]},
+    {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#5a5a4a'}]},
   ];
 }
 </script>
