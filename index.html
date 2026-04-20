@@ -128,6 +128,73 @@ body{
 #map-poi-btn:active{opacity:.7}
 #map-poi-btn.off{border-color:rgba(255,77,109,.5);color:var(--danger)}
 
+
+/* ── FILTER UI ── */
+#filter-bar{
+  padding:0;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+#filter-toprow{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;
+}
+.filter-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+#filter-toggle-btn{
+  font-family:'DM Mono',monospace;font-size:11px;
+  background:transparent;border:1px solid var(--border);
+  border-radius:20px;padding:4px 12px;color:var(--muted);cursor:pointer;
+  margin-left:auto;transition:all .15s;
+}
+#filter-toggle-btn.active{border-color:var(--accent);color:var(--accent)}
+#filter-panel{
+  display:none;padding:10px 14px 12px;border-top:1px solid var(--border);
+}
+#filter-panel.open{display:block}
+#filter-mode-row{
+  display:flex;gap:6px;margin-bottom:10px;
+}
+.fmode-btn{
+  font-family:'DM Mono',monospace;font-size:11px;
+  padding:4px 14px;border-radius:20px;border:1px solid var(--border);
+  color:var(--muted);background:transparent;cursor:pointer;
+}
+.fmode-btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+#filter-tag-checks{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.ftag-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;border-radius:8px;background:var(--surface2);
+  border:1px solid var(--border);cursor:pointer;transition:border-color .15s;
+}
+.ftag-row.checked{border-color:var(--accent);background:var(--accent-dim)}
+.ftag-row:active{opacity:.8}
+.ftag-mark{font-size:14px}
+.ftag-name{flex:1;font-size:13px}
+.ftag-check{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.ftag-row.checked .ftag-check{background:var(--accent);border-color:var(--accent);color:#000}
+#filter-actions{display:flex;gap:8px;margin-top:10px}
+.filter-clear-btn{
+  font-family:'DM Mono',monospace;font-size:11px;
+  padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  color:var(--muted);background:transparent;cursor:pointer;
+}
+.filter-apply-btn{
+  flex:1;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  padding:8px;border-radius:8px;border:none;
+  background:var(--accent);color:#000;cursor:pointer;
+}
+
+/* Map filter button */
+#map-filter-btn{
+  position:absolute;top:62px;right:12px;z-index:50;
+  width:44px;height:44px;border-radius:12px;
+  background:rgba(245,245,240,.92);backdrop-filter:blur(10px);
+  border:1px solid rgba(0,0,0,.1);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;
+  transition:border-color .2s;
+}
+#map-filter-btn.active{border-color:var(--accent);border-width:2px}
+
 /* ── LIST VIEW ── */
 #list-view{
   position:absolute;inset:0;z-index:3;
@@ -720,6 +787,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <div id="map-view">
     <div id="gmap"></div>
     <div class="map-hint" id="map-hint">🔑 APIキーを設定すると地図が有効になります</div>
+    <button id="map-filter-btn" onclick="toggleMapFilter()" title="タグで地図を絞込み">🔍</button>
     <button id="map-poi-btn" onclick="toggleMapPoi()" title="POIアイコン表示切替">
       <!-- Eye open (default: POI visible) -->
       <svg id="eye-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -738,8 +806,22 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <!-- LIST -->
   <div id="list-view">
     <div id="filter-bar">
-      <div class="filter-label">タグフィルタ</div>
-      <div class="chip chip-all on" id="chip-all" onclick="setFilter(null)">すべて</div>
+      <div id="filter-toprow">
+        <div class="filter-label">タグフィルタ</div>
+        <span id="filter-active-tags" style="font-size:10px;color:var(--accent);flex:1;padding-left:8px"></span>
+        <button id="filter-toggle-btn" onclick="toggleFilterPanel()">🔍 絞込み</button>
+      </div>
+      <div id="filter-panel">
+        <div id="filter-mode-row">
+          <button class="fmode-btn on" id="fmode-or" onclick="setFilterMode('or')">OR（どれか）</button>
+          <button class="fmode-btn" id="fmode-and" onclick="setFilterMode('and')">AND（すべて）</button>
+        </div>
+        <div id="filter-tag-checks"></div>
+        <div id="filter-actions">
+          <button class="filter-clear-btn" onclick="clearFilter()">クリア</button>
+          <button class="filter-apply-btn" onclick="applyFilter()">適用</button>
+        </div>
+      </div>
     </div>
     <div id="stat-line">
       <span>登録 <strong id="st-total">0</strong> 件 ／ 表示 <strong id="st-vis">0</strong> 件</span>
@@ -917,7 +999,10 @@ const MARK_OPTIONS=['★','♥','◆','●','▲','☀','♪','✿','⚑','✈',
 let places=JSON.parse(localStorage.getItem('pb_places')||'[]');
 let tagColorMap=JSON.parse(localStorage.getItem('pb_tagcolors')||'{}');
 let tagMarkMap=JSON.parse(localStorage.getItem('pb_tagmarks')||'{}');
-let activeFilter=null,editingId=null,selectedColor=TAG_COLORS[0],selectedMark=MARK_OPTIONS[0];
+let activeFilters=new Set(); // 選択中のタグ群
+let filterMode='or';         // 'or' | 'and'
+let mapFilterOn=false;       // マップ上でも絞り込む
+let editingId=null,selectedColor=TAG_COLORS[0],selectedMark=MARK_OPTIONS[0];
 let gmap=null,placesService=null,markers={};
 let activeCardId=null,currentPhotoPlaceId=null,db=null;
 let _tcIdx=0,currentTab='map';
@@ -1387,21 +1472,100 @@ function closeDropdown(){
 function renderAll(){renderFilterChips();renderList()}
 
 function renderFilterChips(){
-  const bar=document.getElementById('filter-bar');
-  [...bar.querySelectorAll('.chip:not(.chip-all)')].forEach(el=>el.remove());
-  [...new Set(places.flatMap(p=>p.tags))].forEach(tag=>{
+  // Update filter panel tag checkboxes
+  const allTags=[...new Set([...Object.keys(tagColorMap),...places.flatMap(p=>p.tags)])];
+  const container=document.getElementById('filter-tag-checks');
+  if(!container) return;
+  container.innerHTML=allTags.map(tag=>{
     const color=tagColor(tag);
-    const chip=document.createElement('div');
-    chip.className='chip'+(activeFilter===tag?' on':'');
-    chip.style.borderColor=activeFilter===tag?color:'var(--border)';
-    chip.style.color=activeFilter===tag?color:'var(--muted)';
-    chip.textContent=tag;
-    chip.onclick=()=>setFilter(tag);
-    bar.appendChild(chip);
-  });
-  const ca=document.getElementById('chip-all');
-  ca.className='chip chip-all'+(activeFilter===null?' on':'');
+    const mark=tagMark(tag);
+    const checked=activeFilters.has(tag);
+    return `<div class="ftag-row${checked?' checked':''}" onclick="toggleFilterTag('${esc(tag)}')">
+      <span class="ftag-mark" style="color:${color}">${mark}</span>
+      <span class="ftag-name">${esc(tag)}</span>
+      <div class="ftag-check">${checked?'✓':''}</div>
+    </div>`;
+  }).join('')||'<div style="color:var(--muted);font-size:11px;padding:4px">タグがありません</div>';
+
+  // Update active tag summary
+  const summary=document.getElementById('filter-active-tags');
+  if(summary){
+    summary.textContent=activeFilters.size?
+      [...activeFilters].map(t=>tagMark(t)+t).join(filterMode==='and'?' AND ':' OR '):'';
+  }
+  // Update toggle button style
+  const btn=document.getElementById('filter-toggle-btn');
+  if(btn) btn.classList.toggle('active', activeFilters.size>0);
 }
+
+function toggleFilterPanel(){
+  const panel=document.getElementById('filter-panel');
+  panel.classList.toggle('open');
+}
+
+function toggleFilterTag(tag){
+  if(activeFilters.has(tag)) activeFilters.delete(tag);
+  else activeFilters.add(tag);
+  renderFilterChips();
+}
+
+function setFilterMode(mode){
+  filterMode=mode;
+  document.getElementById('fmode-or').classList.toggle('on',mode==='or');
+  document.getElementById('fmode-and').classList.toggle('on',mode==='and');
+  renderFilterChips();
+}
+
+function clearFilter(){
+  activeFilters.clear();
+  renderAll();
+  applyMapFilter();
+}
+
+function applyFilter(){
+  document.getElementById('filter-panel').classList.remove('open');
+  renderAll();
+  applyMapFilter();
+}
+
+function visiblePlaces(){
+  if(!activeFilters.size) return places;
+  return places.filter(p=>{
+    if(filterMode==='and') return [...activeFilters].every(t=>p.tags.includes(t));
+    return [...activeFilters].some(t=>p.tags.includes(t));
+  });
+}
+
+function placePassesFilter(p){
+  if(!activeFilters.size) return true;
+  if(filterMode==='and') return [...activeFilters].every(t=>p.tags.includes(t));
+  return [...activeFilters].some(t=>p.tags.includes(t));
+}
+
+function applyMapFilter(){
+  if(!gmap) return;
+  places.forEach(p=>{
+    if(!markers[p.id]) return;
+    const visible = !mapFilterOn || placePassesFilter(p);
+    markers[p.id].setVisible(visible);
+  });
+}
+
+function toggleMapFilter(){
+  mapFilterOn=!mapFilterOn;
+  const btn=document.getElementById('map-filter-btn');
+  if(btn){
+    btn.classList.toggle('active',mapFilterOn);
+    btn.title=mapFilterOn?'地図フィルタON（タップで解除）':'タグで地図を絞込み';
+  }
+  applyMapFilter();
+  if(mapFilterOn && activeFilters.size===0){
+    showToast('先にリストでタグを選択してください');
+  }
+}
+
+// Legacy setFilter kept for compatibility
+function setFilter(tag){}
 
 function renderList(){
   const vis=visiblePlaces();
@@ -1426,7 +1590,7 @@ function renderList(){
           ${p.rating?`<div class="pc-rating"><span class="stars">★</span>${p.rating}<span style="color:var(--muted)">&nbsp;(${p.reviewCount||0})</span></div>`:''}
         </div>
       </div>
-      ${p.tags.length?`<div class="pc-tags">${p.tags.map(t=>`<div class="ptag" style="border-color:${tagColor(t)};color:${tagColor(t)}">${esc(t)}</div>`).join('')}</div>`:''}
+      ${p.tags.length?`<div class="pc-tags">${p.tags.map(t=>`<div class="ptag" style="border-color:${tagColor(t)};color:${tagColor(t)}">${tagMark(t)} ${esc(t)}</div>`).join('')}</div>`:''}
       ${p.note?`<div class="pc-note">${esc(p.note)}</div>`:''}
       <div class="pc-actions">
         <button class="abtn" onclick="event.stopPropagation();openTagModal('${p.id}')">🏷 タグ</button>
@@ -1435,13 +1599,6 @@ function renderList(){
     </div>`).join('');
 }
 
-function visiblePlaces(){return activeFilter?places.filter(p=>p.tags.includes(activeFilter)):places}
-function setFilter(tag){
-  activeFilter=tag;renderAll();
-  if(gmap)places.forEach(p=>{
-    if(markers[p.id])markers[p.id].setVisible(!activeFilter||p.tags.includes(activeFilter));
-  });
-}
 function cardClick(id){
   const p=places.find(x=>x.id===id);if(!p)return;
   flyTo(p);openDetail(id);
