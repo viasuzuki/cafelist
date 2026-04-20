@@ -384,6 +384,60 @@ body{
   padding:10px;cursor:pointer;margin-top:4px;min-height:44px;
 }
 
+/* Toast notification */
+#toast{
+  position:fixed;bottom:calc(var(--tab-h) + var(--safe-bot) + 16px);
+  left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface3);border:1px solid var(--border);
+  border-radius:20px;padding:8px 18px;
+  font-size:12px;color:var(--text);
+  opacity:0;transition:opacity .25s,transform .25s;
+  pointer-events:none;z-index:9000;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Tag management view */
+#tag-view{
+  position:absolute;inset:0;z-index:3;
+  background:var(--surface);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s ease;
+  visibility:hidden;
+}
+#tag-view.show{transform:translateX(0);visibility:visible}
+#tag-view-head{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#tag-view-list{flex:1;overflow-y:auto;padding:12px;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--tab-h) + var(--safe-bot) + 12px);}
+.tv-tag-section{margin-bottom:20px}
+.tv-tag-header{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  margin-bottom:8px;
+}
+.tv-tag-mark{font-size:18px}
+.tv-tag-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;flex:1}
+.tv-tag-count{font-size:11px;color:var(--muted)}
+.tv-place-row{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px 9px 28px;border-radius:8px;
+  cursor:pointer;transition:background .1s;
+}
+.tv-place-row:active{background:var(--surface2)}
+.tv-place-name{font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv-remove{
+  font-size:11px;color:var(--muted);background:transparent;
+  border:1px solid var(--border);border-radius:6px;
+  padding:3px 8px;cursor:pointer;flex-shrink:0;
+}
+.tv-remove:active{border-color:var(--danger);color:var(--danger)}
+.tv-empty{text-align:center;padding:40px;color:var(--muted);font-size:12px;line-height:2}
+
 /* ── BOTTOM TABS ── */
 #tabs{
   position:fixed;bottom:0;left:0;right:0;z-index:400;
@@ -716,6 +770,17 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   </div>
 </div><!-- /#main -->
 
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- TAG VIEW -->
+<div id="tag-view">
+  <div id="tag-view-head">
+    <span>🏷 タグ管理</span>
+  </div>
+  <div id="tag-view-list"></div>
+</div>
+
 <!-- BOTTOM TABS -->
 <div id="tabs">
   <div class="tab active" id="tab-map" onclick="handleMapTab()">
@@ -729,6 +794,10 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <div class="tab" id="tab-cal" onclick="switchTab('cal')">
     <div class="tab-icon">📅</div>
     <div>日記</div>
+  </div>
+  <div class="tab" id="tab-tag" onclick="switchTab('tag')">
+    <div class="tab-icon">🏷</div>
+    <div>タグ</div>
   </div>
 </div>
 
@@ -1026,24 +1095,32 @@ function cleanMapStyle(){
 }
 
 function handleMapTab(){
-  // If already on map tab, close detail sheet. Otherwise just switch.
   if(currentTab==='map') closeDetail();
   else switchTab('map');
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+function showToast(msg, ms=2000){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'), ms);
 }
 
 // ── TAB SWITCHING ──────────────────────────────────────────────
 function switchTab(tab){
   const prevTab=currentTab;
   currentTab=tab;
-  ['map','list','cal'].forEach(t=>
-    document.getElementById('tab-'+t).classList.toggle('active',t===tab));
-  const listV=document.getElementById('list-view');
-  const calV=document.getElementById('cal-view');
-  listV.classList.toggle('show',tab==='list');
-  calV.classList.toggle('show',tab==='cal');
-  // Only close detail when user actively taps the Map tab button (not when we programmatically switch)
-  // Here we detect: if we came from list/cal and are going to map, keep detail open
+  ['map','list','cal','tag'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.classList.toggle('active',t===tab);
+  });
+  document.getElementById('list-view').classList.toggle('show',tab==='list');
+  document.getElementById('cal-view').classList.toggle('show',tab==='cal');
+  document.getElementById('tag-view').classList.toggle('show',tab==='tag');
   if(tab==='cal') renderCalendar();
+  if(tab==='tag') renderTagView();
 }
 
 // ── SHEET SWIPE DOWN TO CLOSE (only on handle, not whole sheet) ──
@@ -1601,12 +1678,18 @@ function addTag(){
     if(!tagColorMap[val]) tagColorMap[val]=selectedColor;
     if(!tagMarkMap[val])  tagMarkMap[val]=selectedMark;
     p.tags.push(val);
+    save();renderTagModal(p);
+    document.getElementById('new-tag-input').value='';
+    renderAll();
+    if(gmap&&markers[p.id]) addMarker(p);
+    if(activeCardId===p.id) openDetail(p.id);
+    showToast(`${tagMark(val)} "${val}" を追加しました`);
+  } else if(val&&p.tags.includes(val)){
+    showToast('すでに追加済みです');
+  } else {
+    // タグ名なし→モーダルを閉じる
+    closeTagModal();
   }
-  save();renderTagModal(p);
-  document.getElementById('new-tag-input').value='';
-  renderAll();
-  if(gmap&&markers[p.id]) addMarker(p);
-  if(activeCardId===p.id) openDetail(p.id);
 }
 function removeTag(tag){
   const p=places.find(x=>x.id===editingId);if(!p)return;
@@ -1615,6 +1698,53 @@ function removeTag(tag){
   if(gmap&&markers[p.id]) addMarker(p);
 }
 function tagMark(tag){return tagMarkMap[tag]||'★'}
+
+// ── TAG VIEW ──────────────────────────────────────────────────
+function renderTagView(){
+  const allTags=[...new Set([...Object.keys(tagColorMap),...places.flatMap(p=>p.tags)])];
+  const list=document.getElementById('tag-view-list');
+  if(!allTags.length){
+    list.innerHTML='<div class="tv-empty">まだタグがありません<br>店舗詳細からタグを追加できます</div>';
+    return;
+  }
+  list.innerHTML=allTags.map(tag=>{
+    const color=tagColor(tag);
+    const mark=tagMark(tag);
+    const tagged=places.filter(p=>p.tags.includes(tag));
+    return `
+    <div class="tv-tag-section">
+      <div class="tv-tag-header">
+        <span class="tv-tag-mark" style="color:${color}">${mark}</span>
+        <span class="tv-tag-name" style="color:${color}">${esc(tag)}</span>
+        <span class="tv-tag-count">${tagged.length}件</span>
+      </div>
+      ${tagged.length?tagged.map(p=>`
+        <div class="tv-place-row" onclick="tvGoToPlace('${p.id}')">
+          <span style="color:${color};font-size:12px">${mark}</span>
+          <span class="tv-place-name">${esc(p.name)}</span>
+          <button class="tv-remove" onclick="event.stopPropagation();tvRemoveTag('${p.id}','${esc(tag)}')">外す</button>
+        </div>`).join('')
+      :'<div style="padding:6px 12px 6px 28px;font-size:11px;color:var(--muted)">紐付けられた店舗なし</div>'}
+    </div>`;
+  }).join('');
+}
+
+function tvGoToPlace(id){
+  switchTab('map');
+  setTimeout(()=>{
+    const p=places.find(x=>x.id===id);
+    if(p){flyTo(p);openDetail(id);}
+  },300);
+}
+
+function tvRemoveTag(placeId, tag){
+  const p=places.find(x=>x.id===placeId);if(!p)return;
+  p.tags=p.tags.filter(t=>t!==tag);
+  save();renderAll();
+  if(gmap&&markers[p.id]) addMarker(p);
+  renderTagView();
+  showToast(`"${tag}" を外しました`);
+}
 
 // ── DELETE ────────────────────────────────────────────────────
 async function deletePlace(id){
