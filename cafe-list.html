@@ -1459,8 +1459,14 @@ function closeDetail(){
 }
 
 // Wrappers so activeCardId is evaluated at CLICK time, not parse time
-function sheetOpenTag(){ if(activeCardId) openTagModal(activeCardId); }
-function sheetDelete(){  if(activeCardId) deletePlace(activeCardId); }
+function sheetOpenTag(){
+  alert('sheetOpenTag called, activeCardId=' + activeCardId);
+  if(activeCardId) openTagModal(activeCardId);
+}
+function sheetDelete(){
+  alert('sheetDelete called, activeCardId=' + activeCardId);
+  if(activeCardId) deletePlace(activeCardId);
+}
 
 function saveMemo(id){
   const p=places.find(x=>x.id===id);if(!p)return;
@@ -1472,17 +1478,17 @@ function saveMemo(id){
 
 // ── PHOTOS ────────────────────────────────────────────────────
 async function handlePhotoFile(e, placeId){
+  alert('handlePhotoFile: files='+(e.target.files?e.target.files.length:'none')+', placeId='+placeId+', db='+(db?'ready':'null'));
   const files=e.target.files;
-  if(!files||!files.length){ console.log('no files'); return; }
-  if(!placeId){ console.error('no placeId'); return; }
+  if(!files||!files.length){ alert('no files'); return; }
+  if(!placeId){ alert('no placeId'); return; }
   try{
     await savePhotos(placeId, files);
+    alert('savePhotos done');
     e.target.value='';
-    // small delay to ensure IndexedDB commit is visible
     setTimeout(()=>{ if(activeCardId===placeId) openDetail(placeId); }, 150);
   } catch(err){
-    console.error('Photo save failed:', err);
-    alert('写真の保存に失敗しました: '+err);
+    alert('Photo save failed: '+err);
   }
 }
 function initPhotoInputs(){
