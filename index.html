@@ -1991,7 +1991,7 @@ function updateFbBanner(){
   } else if(FB_CONFIGURED && !currentUser){
     banner.classList.remove('configured');
     text.className='fb-banner-text';
-    text.innerHTML='Firebaseは設定済みです。ログインしてください<br><span style="text-decoration:underline;cursor:pointer" onclick="switchTab('settings')">ログイン →</span>';
+    text.innerHTML='Firebaseは設定済みです。ログインしてください<br><span style="text-decoration:underline;cursor:pointer" onclick="switchTab(\'settings\')">ログイン →</span>';
   } else {
     banner.classList.remove('configured');
     text.className='fb-banner-text';
