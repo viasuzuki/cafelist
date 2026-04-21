@@ -138,22 +138,11 @@ body{
 
 /* ── FILTER UI ── */
 #filter-bar{
-  padding:0;border-bottom:1px solid var(--border);flex-shrink:0;
+  padding:0;flex-shrink:0;
 }
-#filter-toprow{
-  display:flex;align-items:center;gap:8px;
-  padding:10px 14px;
-}
-.filter-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-#filter-toggle-btn{
-  font-family:'DM Mono',monospace;font-size:11px;
-  background:transparent;border:1px solid var(--border);
-  border-radius:20px;padding:4px 12px;color:var(--muted);cursor:pointer;
-  margin-left:auto;transition:all .15s;
-}
-#filter-toggle-btn.active{border-color:var(--accent);color:var(--accent)}
 #filter-panel{
-  display:none;padding:10px 14px 12px;border-top:1px solid var(--border);
+  display:none;padding:12px 14px;border-bottom:1px solid var(--border);
+  background:var(--surface2);
 }
 #filter-panel.open{display:block}
 #filter-mode-row{
@@ -287,10 +276,40 @@ body{
 #settings-back-btn{
   width:36px;height:36px;border-radius:9px;
   background:var(--surface3);border:1px solid var(--border);
-  color:var(--text);font-size:16px;cursor:pointer;flex-shrink:0;
+  color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;
 }
 #settings-back-btn:active{opacity:.7}
+
+/* Shared page header for list/cal/tag/notif views */
+.page-header{
+  display:flex;align-items:center;gap:10px;
+  padding:calc(var(--safe-top) + 12px) 14px 12px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);flex-shrink:0;
+}
+.back-btn{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;
+}
+.back-btn:active{opacity:.7}
+.page-title{
+  flex:1;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.header-action-btn{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;
+}
+.header-action-btn:active{opacity:.7}
+.header-action-btn.active{border-color:var(--accent);color:var(--accent)}
 .user-avatar{width:40px;height:40px;border-radius:50%;
   background:var(--accent);display:flex;align-items:center;justify-content:center;
   font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#000;flex-shrink:0}
@@ -482,7 +501,7 @@ body{
 
 #cal-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
+  padding:12px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
 }
 .cal-nav{
   width:40px;height:40px;border-radius:10px;
@@ -1006,13 +1025,14 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 
   <!-- LIST -->
   <div id="list-view">
+    <div class="page-header">
+      <button class="back-btn" onclick="switchTab('map')">◀</button>
+      <div class="page-title">📋 リスト</div>
+      <button class="header-action-btn" id="filter-toggle-btn" onclick="toggleFilterPanel()">🔍</button>
+    </div>
     <div id="filter-bar">
-      <div id="filter-toprow">
-        <div class="filter-label">タグフィルタ</div>
-        <span id="filter-active-tags" style="font-size:10px;color:var(--accent);flex:1;padding-left:8px"></span>
-        <button id="filter-toggle-btn" onclick="toggleFilterPanel()">🔍 絞込み</button>
-      </div>
       <div id="filter-panel">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">タグフィルタ</div>
         <div id="filter-mode-row">
           <button class="fmode-btn on" id="fmode-or" onclick="setFilterMode('or')">OR（どれか）</button>
           <button class="fmode-btn" id="fmode-and" onclick="setFilterMode('and')">AND（すべて）</button>
@@ -1022,6 +1042,9 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
           <button class="filter-clear-btn" onclick="clearFilter()">クリア</button>
           <button class="filter-apply-btn" onclick="applyFilter()">適用</button>
         </div>
+      </div>
+      <div id="filter-active-summary" style="display:none;padding:6px 14px;font-size:10px;color:var(--accent);border-bottom:1px solid var(--border)">
+        <span id="filter-active-tags"></span>
       </div>
     </div>
     <div id="stat-line">
@@ -1038,6 +1061,11 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 
   <!-- CALENDAR -->
   <div id="cal-view">
+    <div class="page-header">
+      <button class="back-btn" onclick="switchTab('map')">◀</button>
+      <div class="page-title">📅 日記</div>
+      <div style="width:36px"></div>
+    </div>
     <div id="cal-header">
       <button class="cal-nav" onclick="calPrev()">‹</button>
       <div id="cal-month-label"></div>
@@ -1054,9 +1082,10 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 
   <!-- NOTIFICATIONS -->
   <div id="notif-view">
-    <div id="notif-head">
-      <h3>🔔 お知らせ</h3>
-      <button id="notif-read-all" onclick="markAllRead()">すべて既読</button>
+    <div class="page-header">
+      <button class="back-btn" onclick="switchTab('map')">◀</button>
+      <div class="page-title">🔔 お知らせ</div>
+      <button class="header-action-btn" onclick="markAllRead()" style="font-size:10px;width:auto;padding:0 10px;white-space:nowrap">既読</button>
     </div>
     <div id="notif-list"></div>
   </div>
@@ -1064,7 +1093,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <!-- SETTINGS -->
   <div id="settings-view">
     <div id="user-bar">
-      <button id="settings-back-btn" onclick="switchTab('map')" title="閉じる">✕</button>
+      <button id="settings-back-btn" onclick="switchTab('map')" title="戻る">◀</button>
       <div class="user-avatar" id="user-avatar">?</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">未ログイン</div>
@@ -1164,14 +1193,10 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 
 <!-- TAG VIEW -->
 <div id="tag-view">
-  <div id="tag-view-head">
-    <span>🏷 タグ管理</span>
-    <button onclick="openCreateTagSheet()"
-      style="font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
-      background:var(--accent);color:#000;border:none;border-radius:8px;
-      padding:7px 14px;cursor:pointer;min-height:36px">
-      ＋ 新規タグ
-    </button>
+  <div class="page-header">
+    <button class="back-btn" onclick="switchTab('map')">◀</button>
+    <div class="page-title">🏷 タグ管理</div>
+    <button class="header-action-btn" onclick="openCreateTagSheet()" style="width:auto;padding:0 12px;background:var(--accent);color:#000;font-size:12px;font-weight:500;white-space:nowrap">＋新規</button>
   </div>
   <div id="tag-view-list"></div>
 </div>
@@ -2417,9 +2442,13 @@ function renderFilterChips(){
 
   // Update active tag summary
   const summary=document.getElementById('filter-active-tags');
+  const summaryBar=document.getElementById('filter-active-summary');
   if(summary){
     summary.textContent=activeFilters.size?
       [...activeFilters].map(t=>tagMark(t)+t).join(filterMode==='and'?' AND ':' OR '):'';
+  }
+  if(summaryBar){
+    summaryBar.style.display = activeFilters.size ? 'block' : 'none';
   }
   // Update toggle button style
   const btn=document.getElementById('filter-toggle-btn');
