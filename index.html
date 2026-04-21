@@ -2153,7 +2153,8 @@ window.setupMap=function(){
   const hint=document.getElementById('map-hint');
   hint.textContent='検索して場所を追加できます';
   setTimeout(()=>hint.classList.add('hide'),3500);
-  document.getElementById('key-btn').classList.add('ok');
+  const keyBtn=document.getElementById('key-btn');
+  if(keyBtn) keyBtn.classList.add('ok');
   places.forEach(p=>{if(p.lat)addMarker(p)});
 };
 
