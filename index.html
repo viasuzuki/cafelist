@@ -262,7 +262,8 @@ body{
 /* User info bar */
 #user-bar{
   background:var(--surface2);border-bottom:1px solid var(--border);
-  padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+  padding:calc(var(--safe-top) + 14px) 16px 14px;
+  display:flex;align-items:center;gap:12px;flex-shrink:0;
 }
 .user-avatar{width:40px;height:40px;border-radius:50%;
   background:var(--accent);display:flex;align-items:center;justify-content:center;
@@ -313,7 +314,7 @@ body{
   visibility:hidden;
 }
 #notif-view.show{transform:translateX(0);visibility:visible}
-#notif-head{padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+#notif-head{padding:calc(var(--safe-top) + 14px) 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
   display:flex;align-items:center;justify-content:space-between}
 #notif-head h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
 #notif-read-all{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
@@ -642,7 +643,8 @@ body{
 }
 #tag-view.show{transform:translateX(0);visibility:visible}
 #tag-view-head{
-  padding:14px 16px;border-bottom:1px solid var(--border);
+  padding:calc(var(--safe-top) + 14px) 16px 14px;
+  border-bottom:1px solid var(--border);
   font-family:'Syne',sans-serif;font-size:16px;font-weight:700;flex-shrink:0;
   display:flex;align-items:center;justify-content:space-between;
 }
@@ -964,7 +966,6 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
     <input id="search-input" type="text" placeholder="店名・場所で検索..." autocomplete="off" autocorrect="off" spellcheck="false">
     <span class="s-icon">⌕</span>
   </div>
-  <div id="key-btn" onclick="openApiModal()">🔑</div>
 </div>
 
 <!-- SEARCH DROPDOWN -->
@@ -1473,7 +1474,10 @@ async function loadUserProfile(uid){
 }
 
 function getNickname(){
-  return userProfile?.nickname || currentUser?.email?.split('@')[0] || '名無し';
+  return userProfile?.nickname
+    || localStorage.getItem('pb_nickname')
+    || currentUser?.email?.split('@')[0]
+    || '名無し';
 }
 
 function updateUserBar(user){
@@ -1508,10 +1512,17 @@ function closeNicknameModal(){
 async function saveNickname(){
   const val=document.getElementById('nickname-input').value.trim();
   if(!val){ showToast('ニックネームを入力してください'); return; }
-  if(!currentUser){ showToast('ログインが必要です'); return; }
-  const {doc,updateDoc}=window._fbModules;
-  await updateDoc(doc(fbDb,'users',currentUser.uid),{nickname:val});
-  if(userProfile) userProfile.nickname=val;
+  // ローカル保存（Firebaseなしでも動く）
+  localStorage.setItem('pb_nickname', val);
+  if(!userProfile) userProfile={};
+  userProfile.nickname=val;
+  // Firebaseにも保存（ログイン中の場合のみ）
+  if(currentUser && fbDb){
+    try{
+      const {doc,updateDoc}=window._fbModules;
+      await updateDoc(doc(fbDb,'users',currentUser.uid),{nickname:val});
+    } catch(e){ console.error('Nickname sync error:',e); }
+  }
   updateUserBar(currentUser);
   updateSettingsPage();
   closeNicknameModal();
@@ -1931,6 +1942,7 @@ window.onload=async function(){
   }
   const key=localStorage.getItem('pb_apikey');
   if(key) initMap(key);
+  fetchUserLocation(); // 位置情報を事前取得
   renderAll();
   document.getElementById('search-input').addEventListener('input',debounce(doSearch,450));
   document.getElementById('search-input').addEventListener('keydown',e=>{
@@ -2058,8 +2070,9 @@ function initMap(key){
   document.head.appendChild(s);
 }
 window.setupMap=function(){
+  const initCenter=userLocation||{lat:38.2682,lng:140.8694};
   gmap=new google.maps.Map(document.getElementById('gmap'),{
-    center:{lat:38.2682,lng:140.8694},zoom:13,
+    center:initCenter,zoom:13,
     styles:darkStyle(),
     zoomControl:true,mapTypeControl:false,streetViewControl:false,
     fullscreenControl:false,gestureHandling:'greedy'
@@ -2092,6 +2105,17 @@ function removeMarker(id){if(markers[id]){markers[id].setMap(null);delete marker
 function flyTo(p){if(!gmap||!p.lat)return;gmap.panTo({lat:p.lat,lng:p.lng});gmap.setZoom(16)}
 
 // ── SEARCH ─────────────────────────────────────────────────────
+// ── GEOLOCATION ───────────────────────────────────────────────
+let userLocation=null;
+function fetchUserLocation(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos=>{ userLocation={lat:pos.coords.latitude, lng:pos.coords.longitude}; },
+    ()=>{ userLocation=null; },
+    {enableHighAccuracy:false, timeout:5000, maximumAge:60000}
+  );
+}
+
 function doSearch(){
   const q=document.getElementById('search-input').value.trim();
   if(q.length<2){closeDropdown();return}
@@ -2099,7 +2123,16 @@ function doSearch(){
   dd.innerHTML='<div class="sd-msg">検索中...</div>';
   dd.classList.add('show');
   if(placesService){
-    placesService.textSearch({query:q,language:'ja'},(res,status)=>{
+    const req={query:q, language:'ja'};
+    // 位置情報があれば周辺優先
+    if(userLocation){
+      req.location=new google.maps.LatLng(userLocation.lat, userLocation.lng);
+      req.radius=10000; // 10km優先
+    } else if(gmap){
+      req.location=gmap.getCenter();
+      req.radius=5000;
+    }
+    placesService.textSearch(req,(res,status)=>{
       if(status!==google.maps.places.PlacesServiceStatus.OK||!res){
         dd.innerHTML='<div class="sd-msg">見つかりませんでした</div>';return
       }
@@ -2110,7 +2143,10 @@ function doSearch(){
       })));
     });
   } else {
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&accept-language=ja`)
+    // Nominatim fallback with location bias
+    let url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&accept-language=ja`;
+    if(userLocation) url+=`&viewbox=${userLocation.lng-0.1},${userLocation.lat+0.1},${userLocation.lng+0.1},${userLocation.lat-0.1}&bounded=0`;
+    fetch(url)
       .then(r=>r.json()).then(res=>{
         renderDropdown(res.map(r=>({
           place_id:null,name:r.display_name.split(',')[0],
