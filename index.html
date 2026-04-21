@@ -284,6 +284,13 @@ body{
   padding:calc(var(--safe-top) + 14px) 16px 14px;
   display:flex;align-items:center;gap:12px;flex-shrink:0;
 }
+#settings-back-btn{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--surface3);border:1px solid var(--border);
+  color:var(--text);font-size:16px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+#settings-back-btn:active{opacity:.7}
 .user-avatar{width:40px;height:40px;border-radius:50%;
   background:var(--accent);display:flex;align-items:center;justify-content:center;
   font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#000;flex-shrink:0}
@@ -1057,8 +1064,9 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <!-- SETTINGS -->
   <div id="settings-view">
     <div id="user-bar">
+      <button id="settings-back-btn" onclick="switchTab('map')" title="閉じる">✕</button>
       <div class="user-avatar" id="user-avatar">?</div>
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">未ログイン</div>
         <div class="user-email" id="user-email-display"></div>
       </div>
@@ -2689,14 +2697,19 @@ async function handlePhotoFile(e, placeId){
   const files=e.target.files;
   if(!files||!files.length||!placeId) return;
   try{
+    // Always save locally so photos appear in IndexedDB
     await savePhotos(placeId, files);
     e.target.value='';
     if(activeCardId===placeId) await openDetail(placeId);
     else if(!activeCardId) await openDetail(placeId);
-    // Notify
+    // Single notification per upload (not per file)
     const p=places.find(x=>x.id===placeId);
     if(fbDb&&currentUser&&p){
-      addNotification('photo', getNickname()+'が「'+p.name+'」に写真を追加しました', placeId).catch(console.error);
+      const count=files.length;
+      const msg=count>1
+        ? `${getNickname()}が「${p.name}」に写真${count}枚を追加しました`
+        : `${getNickname()}が「${p.name}」に写真を追加しました`;
+      addNotification('photo', msg, placeId).catch(console.error);
     }
   } catch(err){
     alert('写真の保存に失敗: '+err);
