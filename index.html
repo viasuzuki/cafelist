@@ -1359,19 +1359,24 @@ let calActiveDate=null; // currently open date string 'YYYY-MM-DD'
 // ── FIREBASE CONFIG ────────────────────────────────────────────
 // Firebaseの設定値をここに入力してください
 // Load Firebase config from localStorage if available
-const _savedFbConfig = (() => {
-  try { return JSON.parse(localStorage.getItem('pb_firebase_config')||'null'); } catch(e){ return null; }
-})();
-const FIREBASE_CONFIG = _savedFbConfig || {
-  // Firebase Consoleから取得した設定値を以下に貼り付けてください
-  // apiKey: "AIzaSy...",
-  // authDomain: "your-app.firebaseapp.com",
-  // projectId: "your-app",
-  // storageBucket: "your-app.appspot.com",
-  // messagingSenderId: "123456789",
-  // appId: "1:123456789:web:abcdef"
+
+// Cloudinary config (unsigned upload - safe to embed)
+const CLOUDINARY_CLOUD = 'dgcyagj8h';
+const CLOUDINARY_PRESET = 'rmn4hc91';
+const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`;
+
+// Firebase config (embedded)
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDmiUiGa2ARJEPyilHS7Ls7GwQOvxXtlEE",
+  authDomain: "cafe-list2026.firebaseapp.com",
+  projectId: "cafe-list2026",
+  storageBucket: "cafe-list2026.firebasestorage.app",
+  messagingSenderId: "388250635631",
+  appId: "1:388250635631:web:9cdc3cfac381322ae7ac9a"
 };
-const FB_CONFIGURED = _savedFbConfig !== null || (Object.keys(FIREBASE_CONFIG).length > 0 && FIREBASE_CONFIG.apiKey !== undefined);
+const FB_CONFIGURED = true;
+// Also save to localStorage for settings display
+try { localStorage.setItem('pb_firebase_config', JSON.stringify(FIREBASE_CONFIG)); } catch(e){}
 
 let fbApp=null, fbAuth=null, fbDb=null, fbStorage=null;
 let currentUser=null;
@@ -2576,12 +2581,12 @@ async function openDetail(id){
         <div style="display:flex;gap:6px">
           <div class="photo-btn-wrap">
             <button class="photo-add-btn" style="font-size:18px;padding:6px 10px">📸</button>
-            <input type="file" accept="image/*" capture="environment"
+            <input type="file" accept="image/*,video/*" capture="environment"
               onchange="handlePhotoFile(event,'${id}')">
           </div>
           <div class="photo-btn-wrap">
             <button class="photo-add-btn">＋ ライブラリ</button>
-            <input type="file" accept="image/*" multiple
+            <input type="file" accept="image/*,video/*" multiple
               onchange="handlePhotoFile(event,'${id}')">
           </div>
         </div>
@@ -2685,6 +2690,149 @@ function saveMemo(id){
   }
 }
 
+
+// ── CLOUDINARY MEDIA ──────────────────────────────────────────
+async function uploadToCloudinary(file, placeId){
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_PRESET);
+  formData.append('folder', `cafelist/${placeId}`);
+  // Add tags for easy retrieval
+  formData.append('tags', `place_${placeId}`);
+
+  const res = await fetch(CLOUDINARY_UPLOAD_URL, {method:'POST', body:formData});
+  if(!res.ok) throw new Error('Cloudinary upload failed: ' + res.status);
+  const data = await res.json();
+  return {
+    publicId: data.public_id,
+    url: data.secure_url,
+    resourceType: data.resource_type, // 'image' or 'video'
+    thumbnailUrl: data.resource_type === 'video'
+      ? data.secure_url.replace('/upload/', '/upload/so_0,w_300,h_300,c_fill/')
+      : data.secure_url.replace('/upload/', '/upload/w_300,h_300,c_fill/'),
+    width: data.width,
+    height: data.height,
+    duration: data.duration || null,
+    addedAt: Date.now(),
+    placeId
+  };
+}
+
+async function deleteFromCloudinary(publicId){
+  // Client-side delete requires signed request - skip for now
+  // Photos will remain in Cloudinary but removed from app
+  console.log('Cloudinary delete skipped (requires server):', publicId);
+}
+
+// Override savePhotos to use Cloudinary when logged in
+async function savePhotos(placeId, files){
+  if(currentUser && FB_CONFIGURED){
+    return savePhotosCloud(placeId, files);
+  }
+  return savePhotosLocal(placeId, files);
+}
+
+async function savePhotosCloud(placeId, files){
+  const {collection, addDoc, serverTimestamp} = window._fbModules;
+  const fileArr = Array.from(files);
+  for(const file of fileArr){
+    try{
+      showToast('アップロード中... ' + file.name);
+      const result = await uploadToCloudinary(file, placeId);
+      // Save metadata to Firestore
+      await addDoc(collection(fbDb, 'media'), {
+        ...result,
+        uploadedBy: currentUser.uid,
+        uploadedByName: getNickname(),
+        createdAt: serverTimestamp()
+      });
+      // Notify
+      const p = places.find(x=>x.id===placeId);
+      if(p){
+        const type = result.resourceType === 'video' ? 'video' : 'photo';
+        const icon = type === 'video' ? '🎥' : '📷';
+        addNotification(type, getNickname()+'が「'+p.name+'」に'+icon+'を追加しました', placeId).catch(console.error);
+      }
+    } catch(e){
+      console.error('Cloud upload error:', e);
+      showToast('アップロード失敗: ' + (e.message||'エラー'));
+    }
+  }
+}
+
+// Keep local savePhotos as fallback
+async function savePhotosLocal(placeId, files){
+  return new Promise(async (res, rej)=>{
+    if(!db){ res(); return; }
+    const fileArr = Array.from(files);
+    const fileData = [];
+    try{
+      for(const f of fileArr){
+        const dataUrl = await new Promise((r,e)=>{
+          const reader = new FileReader();
+          reader.onload = ev => r(ev.target.result);
+          reader.onerror = ev => e(ev);
+          reader.readAsDataURL(f);
+        });
+        fileData.push({placeId, blob:dataUrl, name:f.name, type:f.type, addedAt:Date.now()});
+      }
+    } catch(err){ rej(err); return; }
+    const tx = db.transaction('photos','readwrite');
+    tx.oncomplete = () => res();
+    tx.onerror = e => rej(e);
+    tx.onabort = e => rej(e);
+    const store = tx.objectStore('photos');
+    fileData.forEach(d => store.add(d));
+  });
+}
+
+// Override getPhotos to get from Firestore when logged in
+async function getPhotos(placeId){
+  if(currentUser && fbDb){
+    return getPhotosCloud(placeId);
+  }
+  return getPhotosLocal(placeId);
+}
+
+async function getPhotosCloud(placeId){
+  const {collection, query, where, getDocs} = window._fbModules;
+  try{
+    const q = query(collection(fbDb,'media'), where('placeId','==',placeId));
+    const snap = await getDocs(q);
+    const results = [];
+    snap.forEach(d => results.push({id:d.id, ...d.data()}));
+    return results.sort((a,b) => (a.addedAt||0) - (b.addedAt||0));
+  } catch(e){
+    console.error('getPhotosCloud error:', e);
+    return [];
+  }
+}
+
+function getPhotosLocal(placeId){
+  return new Promise(res=>{
+    if(!db){res([]);return}
+    const tx = db.transaction('photos','readonly');
+    const req = tx.objectStore('photos').index('placeId').getAll(placeId);
+    req.onsuccess = e => res(e.target.result||[]);
+    req.onerror = () => res([]);
+  });
+}
+
+// Override deletePhoto
+async function deletePhoto(id){
+  if(currentUser && fbDb){
+    const {doc, deleteDoc} = window._fbModules;
+    try{ await deleteDoc(doc(fbDb,'media',id)); } catch(e){ console.error(e); }
+    return;
+  }
+  return new Promise(res=>{
+    if(!db){res();return}
+    const tx = db.transaction('photos','readwrite');
+    tx.objectStore('photos').delete(id);
+    tx.oncomplete = res;
+  });
+}
+
 // ── PHOTOS ────────────────────────────────────────────────────
 async function handlePhotoFile(e, placeId){
   const files=e.target.files;
@@ -2714,11 +2862,31 @@ async function handleDeletePhoto(photoId, placeId){
 function initPhotoInputs(){
   // No-op: inputs are generated inline in openDetail
 }
-function openLightbox(src){
-  document.getElementById('lb-img').src=src;
-  document.getElementById('lightbox').classList.add('show');
+function openLightbox(src, isVideo=false){
+  const lb=document.getElementById('lightbox');
+  const img=document.getElementById('lb-img');
+  // Remove existing video if any
+  const oldVid=lb.querySelector('video');
+  if(oldVid) oldVid.remove();
+  if(isVideo){
+    img.style.display='none';
+    const vid=document.createElement('video');
+    vid.src=src; vid.controls=true; vid.autoplay=true;
+    vid.style.cssText='max-width:100%;max-height:80vh;border-radius:8px';
+    lb.insertBefore(vid, document.getElementById('lb-close'));
+  } else {
+    img.style.display='';
+    img.src=src;
+  }
+  lb.classList.add('show');
 }
-function closeLightbox(){document.getElementById('lightbox').classList.remove('show')}
+function closeLightbox(){
+  const lb=document.getElementById('lightbox');
+  lb.classList.remove('show');
+  const vid=lb.querySelector('video');
+  if(vid){ vid.pause(); vid.remove(); }
+  document.getElementById('lb-img').style.display='';
+}
 
 // ── TAG MODAL ──────────────────────────────────────────────────
 function openTagModal(id){
