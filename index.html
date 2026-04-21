@@ -59,6 +59,13 @@ body{
   font-size:16px;cursor:pointer;flex-shrink:0;
 }
 #key-btn.ok{border-color:rgba(184,245,66,.4)}
+#topbar-settings-btn{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;flex-shrink:0;
+}
+#topbar-settings-btn:active{opacity:.7}
 
 /* ── SEARCH DROPDOWN ── */
 #search-dropdown{
@@ -949,30 +956,20 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 #lb-close:active{opacity:1}
 </style>
 
-<!-- Eruda mobile debugger (temporary) -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
-
 <!-- Firebase v8 via jsDelivr CDN -->
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"
-  onload="console.log('firebase-app.js OK')"
-  onerror="console.error('firebase-app.js FAILED')"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js"
-  onload="console.log('firebase-auth.js OK')"
-  onerror="console.error('firebase-auth.js FAILED')"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-firestore.js"
-  onload="console.log('firebase-firestore.js OK')"
-  onerror="console.error('firebase-firestore.js FAILED')"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
 <!-- TOP BAR -->
 <div id="topbar">
-  <div class="logo">◈ PB</div>
   <div id="search-bar">
     <input id="search-input" type="text" placeholder="店名・場所で検索..." autocomplete="off" autocorrect="off" spellcheck="false">
     <span class="s-icon">⌕</span>
   </div>
+  <div id="topbar-settings-btn" onclick="switchTab('settings')" title="設定">⚙️</div>
 </div>
 
 <!-- SEARCH DROPDOWN -->
@@ -1214,10 +1211,6 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <div class="tab" id="tab-notif" onclick="switchTab('notif')">
     <div class="tab-icon">🔔</div>
     <div>通知</div>
-  </div>
-  <div class="tab" id="tab-settings" onclick="switchTab('settings')">
-    <div class="tab-icon">⚙️</div>
-    <div>設定</div>
   </div>
 </div>
 
