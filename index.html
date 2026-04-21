@@ -231,7 +231,7 @@ body{
 
 /* ── SETTINGS VIEW ── */
 #settings-view{
-  position:absolute;inset:0;z-index:3;
+  position:fixed;inset:0;z-index:600;
   background:var(--surface);
   display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .3s ease;
@@ -258,6 +258,18 @@ body{
 .settings-label-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .settings-arrow{color:var(--muted);font-size:16px}
 .settings-value{font-size:12px;color:var(--muted)}
+
+
+/* Firebase status banner */
+#fb-status-banner{
+  margin:12px 16px;padding:12px 14px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;display:flex;align-items:center;gap:10px;
+}
+#fb-status-banner.configured{border-color:rgba(184,245,66,.3);background:var(--accent-dim)}
+.fb-banner-icon{font-size:18px;flex-shrink:0}
+.fb-banner-text{flex:1;font-size:12px;line-height:1.5;color:var(--muted)}
+.fb-banner-text.configured{color:var(--accent)}
 
 /* User info bar */
 #user-bar{
@@ -307,7 +319,7 @@ body{
 
 /* ── NOTIFICATIONS VIEW ── */
 #notif-view{
-  position:absolute;inset:0;z-index:3;
+  position:fixed;inset:0;z-index:600;
   background:var(--surface);
   display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .3s ease;
@@ -367,7 +379,7 @@ body{
 
 /* ── LIST VIEW ── */
 #list-view{
-  position:absolute;inset:0;z-index:3;
+  position:fixed;inset:0;z-index:600;
   background:var(--surface);
   display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .3s ease;
@@ -445,7 +457,7 @@ body{
 
 /* ── CALENDAR VIEW ── */
 #cal-view{
-  position:absolute;inset:0;z-index:3;
+  position:fixed;inset:0;z-index:600;
   background:var(--surface);
   display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .3s ease;
@@ -635,7 +647,7 @@ body{
 
 /* Tag management view */
 #tag-view{
-  position:absolute;inset:0;z-index:3;
+  position:fixed;inset:0;z-index:600;
   background:var(--surface);
   display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .3s ease;
@@ -1060,7 +1072,15 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
       </div>
     </div>
     <div id="settings-scroll">
-      <div class="settings-section">
+      <!-- Firebase status banner -->
+      <div id="fb-status-banner">
+        <span class="fb-banner-icon">☁️</span>
+        <div class="fb-banner-text" id="fb-banner-text">
+          Firebaseを設定すると共有・通知が使えます<br>
+          <span style="text-decoration:underline;cursor:pointer" onclick="openFirebaseModal()">設定する →</span>
+        </div>
+      </div>
+            <div class="settings-section">
         <div class="settings-section-title">プロフィール</div>
         <div class="settings-row" onclick="openEditNickname()">
           <div class="settings-icon">👤</div>
@@ -1338,7 +1358,11 @@ let calActiveDate=null; // currently open date string 'YYYY-MM-DD'
 
 // ── FIREBASE CONFIG ────────────────────────────────────────────
 // Firebaseの設定値をここに入力してください
-const FIREBASE_CONFIG = {
+// Load Firebase config from localStorage if available
+const _savedFbConfig = (() => {
+  try { return JSON.parse(localStorage.getItem('pb_firebase_config')||'null'); } catch(e){ return null; }
+})();
+const FIREBASE_CONFIG = _savedFbConfig || {
   // Firebase Consoleから取得した設定値を以下に貼り付けてください
   // apiKey: "AIzaSy...",
   // authDomain: "your-app.firebaseapp.com",
@@ -1347,8 +1371,7 @@ const FIREBASE_CONFIG = {
   // messagingSenderId: "123456789",
   // appId: "1:123456789:web:abcdef"
 };
-const FB_CONFIGURED = Object.keys(FIREBASE_CONFIG).length > 0 &&
-  FIREBASE_CONFIG.apiKey !== undefined;
+const FB_CONFIGURED = _savedFbConfig !== null || (Object.keys(FIREBASE_CONFIG).length > 0 && FIREBASE_CONFIG.apiKey !== undefined);
 
 let fbApp=null, fbAuth=null, fbDb=null, fbStorage=null;
 let currentUser=null;
@@ -1491,6 +1514,7 @@ function updateUserBar(user){
 }
 
 function updateSettingsPage(){
+  updateFbBanner();
   const key=localStorage.getItem('pb_apikey');
   const apiSub=document.getElementById('settings-apikey-sub');
   if(apiSub) apiSub.textContent=key?'設定済み':'未設定';
@@ -1932,6 +1956,49 @@ function deleteAllPhotos(placeId){
 }
 
 // ── INIT ──────────────────────────────────────────────────────
+
+// ── FIREBASE RUNTIME CONFIG ────────────────────────────────────
+function openFirebaseModal(){
+  const saved=localStorage.getItem('pb_firebase_config');
+  document.getElementById('firebase-config-input').value=saved||'';
+  document.getElementById('firebase-modal').classList.add('show');
+}
+function closeFirebaseModal(){
+  document.getElementById('firebase-modal').classList.remove('show');
+}
+async function saveFirebaseConfig(){
+  const raw=document.getElementById('firebase-config-input').value.trim();
+  if(!raw){ showToast('設定を入力してください'); return; }
+  try{
+    const config=JSON.parse(raw);
+    if(!config.apiKey||!config.projectId){ showToast('設定が不完全です'); return; }
+    localStorage.setItem('pb_firebase_config', JSON.stringify(config));
+    closeFirebaseModal();
+    showToast('Firebase設定を保存しました。再読み込みします...');
+    setTimeout(()=>location.reload(true), 1500);
+  } catch(e){
+    showToast('JSON形式が正しくありません');
+  }
+}
+function updateFbBanner(){
+  const banner=document.getElementById('fb-status-banner');
+  const text=document.getElementById('fb-banner-text');
+  if(!banner||!text) return;
+  if(FB_CONFIGURED && currentUser){
+    banner.classList.add('configured');
+    text.className='fb-banner-text configured';
+    text.innerHTML='☁️ Firebaseに接続中<br><span style="font-size:10px">'+getNickname()+'としてログイン済み</span>';
+  } else if(FB_CONFIGURED && !currentUser){
+    banner.classList.remove('configured');
+    text.className='fb-banner-text';
+    text.innerHTML='Firebaseは設定済みです。ログインしてください<br><span style="text-decoration:underline;cursor:pointer" onclick="switchTab('settings')">ログイン →</span>';
+  } else {
+    banner.classList.remove('configured');
+    text.className='fb-banner-text';
+    text.innerHTML='Firebaseを設定すると共有・通知が使えます<br><span style="text-decoration:underline;cursor:pointer" onclick="openFirebaseModal()">設定する →</span>';
+  }
+}
+
 window.onload=async function(){
   await initDB();
   // Init Firebase (non-blocking)
@@ -3122,6 +3189,26 @@ function darkStyle(){
       <div class="mbtns">
         <button class="mbtn-cancel" onclick="closeNicknameModal()">キャンセル</button>
         <button class="mbtn-ok" onclick="saveNickname()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- FIREBASE CONFIG MODAL -->
+<div class="modal-bg" id="firebase-modal">
+  <div class="modal-sheet">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <h3>☁️ Firebase設定</h3>
+      <p>Firebase ConsoleのプロジェクトJSON設定を貼り付けてください</p>
+    </div>
+    <div class="ms-body">
+      <textarea class="mfield" id="firebase-config-input" style="height:140px;font-size:11px"
+        placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+      <div class="mbtns">
+        <button class="mbtn-cancel" onclick="closeFirebaseModal()">キャンセル</button>
+        <button class="mbtn-ok" onclick="saveFirebaseConfig()">保存・接続</button>
       </div>
     </div>
   </div>
