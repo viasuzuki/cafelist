@@ -195,6 +195,175 @@ body{
 }
 #map-filter-btn.active{border-color:var(--accent);border-width:2px}
 
+
+/* ── AUTH SCREEN ── */
+#auth-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;
+}
+#auth-screen.hidden{display:none}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;
+  color:var(--accent);margin-bottom:8px}
+.auth-sub{font-size:12px;color:var(--muted);margin-bottom:40px;text-align:center}
+.auth-card{width:100%;max-width:340px;background:var(--surface);
+  border:1px solid var(--border);border-radius:16px;padding:24px;}
+.auth-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+  margin-bottom:16px;text-align:center}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;color:var(--text);
+  font-family:'DM Mono',monospace;font-size:14px;outline:none;
+  -webkit-appearance:none;margin-bottom:10px;min-height:44px}
+.auth-input:focus{border-color:var(--accent)}
+.auth-btn{width:100%;font-family:'DM Mono',monospace;font-size:14px;font-weight:500;
+  background:var(--accent);color:#000;border:none;border-radius:10px;
+  padding:13px;cursor:pointer;min-height:48px;margin-bottom:10px}
+.auth-btn:active{opacity:.8}
+.auth-link{text-align:center;font-size:12px;color:var(--muted);cursor:pointer;
+  text-decoration:underline;padding:8px}
+.auth-err{font-size:11px;color:var(--danger);text-align:center;margin-bottom:8px;min-height:16px}
+.auth-mode-toggle{display:flex;gap:8px;margin-bottom:16px}
+.auth-mode-btn{flex:1;font-family:'DM Mono',monospace;font-size:12px;
+  padding:8px;border-radius:8px;border:1px solid var(--border);
+  color:var(--muted);background:transparent;cursor:pointer}
+.auth-mode-btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+/* ── SETTINGS VIEW ── */
+#settings-view{
+  position:absolute;inset:0;z-index:3;
+  background:var(--surface);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s ease;
+  visibility:hidden;
+}
+#settings-view.show{transform:translateX(0);visibility:visible}
+#settings-scroll{flex:1;overflow-y:auto;padding:16px;
+  padding-bottom:calc(var(--tab-h) + var(--safe-bot) + 16px);
+  -webkit-overflow-scrolling:touch;}
+.settings-section{margin-bottom:24px}
+.settings-section-title{font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:10px;padding:0 2px}
+.settings-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;
+}
+.settings-row:active{background:var(--surface3)}
+.settings-row.danger{border-color:rgba(255,77,109,.2)}
+.settings-row.danger:active{background:rgba(255,77,109,.05)}
+.settings-icon{font-size:20px;width:28px;text-align:center;flex-shrink:0}
+.settings-label{flex:1}
+.settings-label-main{font-size:14px;color:var(--text)}
+.settings-label-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.settings-arrow{color:var(--muted);font-size:16px}
+.settings-value{font-size:12px;color:var(--muted)}
+
+/* User info bar */
+#user-bar{
+  background:var(--surface2);border-bottom:1px solid var(--border);
+  padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+.user-avatar{width:40px;height:40px;border-radius:50%;
+  background:var(--accent);display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#000;flex-shrink:0}
+.user-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:600}
+.user-email{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* Invite sheet */
+#invite-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:1600;
+  background:var(--surface);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--border);
+  max-height:80vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 -8px 32px rgba(0,0,0,.5);
+}
+#invite-sheet.open{transform:translateY(0)}
+.inv-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:10px auto 0;flex-shrink:0}
+#inv-head{padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between}
+#inv-head h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+#inv-body{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--safe-bot)+16px)}
+.inv-link-box{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;font-size:12px;word-break:break-all;color:var(--muted);
+  margin-bottom:12px;
+}
+.inv-member-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:8px;
+}
+.inv-member-name{flex:1;font-size:13px}
+.inv-member-status{font-size:10px;padding:3px 8px;border-radius:20px}
+.inv-status-pending{background:rgba(245,161,66,.15);color:#f5a142;border:1px solid rgba(245,161,66,.3)}
+.inv-status-active{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(184,245,66,.3)}
+.inv-revoke{font-size:11px;color:var(--muted);background:transparent;
+  border:1px solid var(--border);border-radius:6px;padding:4px 9px;cursor:pointer}
+.inv-revoke:active{border-color:var(--danger);color:var(--danger)}
+
+/* ── NOTIFICATIONS VIEW ── */
+#notif-view{
+  position:absolute;inset:0;z-index:3;
+  background:var(--surface);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s ease;
+  visibility:hidden;
+}
+#notif-view.show{transform:translateX(0);visibility:visible}
+#notif-head{padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between}
+#notif-head h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+#notif-read-all{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
+  background:transparent;border:1px solid var(--border);border-radius:7px;
+  padding:5px 12px;cursor:pointer}
+#notif-list{flex:1;overflow-y:auto;padding:10px 12px;
+  padding-bottom:calc(var(--tab-h) + var(--safe-bot) + 10px);
+  -webkit-overflow-scrolling:touch;}
+.notif-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;
+}
+.notif-card.unread{border-left:3px solid var(--accent)}
+.notif-card:active{background:var(--surface3)}
+.notif-icon{font-size:16px;margin-right:8px}
+.notif-text{font-size:13px;line-height:1.4}
+.notif-time{font-size:10px;color:var(--muted);margin-top:4px}
+.notif-empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:12px;line-height:2}
+
+/* Notification badge on tab */
+.tab-badge{
+  position:absolute;top:4px;right:calc(50% - 18px);
+  background:var(--danger);color:#fff;
+  font-size:9px;font-weight:700;
+  width:16px;height:16px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+#tab-notif{position:relative}
+
+/* Migrate sheet */
+#migrate-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:1600;
+  background:var(--surface);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--border);
+  max-height:70vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 -8px 32px rgba(0,0,0,.5);
+}
+#migrate-sheet.open{transform:translateY(0)}
+.mig-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:10px auto 0;flex-shrink:0}
+#mig-body{padding:20px 18px;overflow-y:auto;flex:1;
+  padding-bottom:calc(var(--safe-bot)+16px)}
+.mig-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px}
+.mig-desc{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+.mig-progress{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:12px 14px;margin-bottom:12px;font-size:12px;min-height:48px;
+  display:flex;align-items:center;gap:10px}
+.mig-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:8px;overflow:hidden}
+.mig-bar{height:6px;background:var(--accent);border-radius:3px;width:0%;transition:width .3s}
+
 /* ── LIST VIEW ── */
 #list-view{
   position:absolute;inset:0;z-index:3;
@@ -765,6 +934,26 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 }
 #lb-close:active{opacity:1}
 </style>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+           onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs,
+           onSnapshot, addDoc, updateDoc, deleteDoc, query, where,
+           orderBy, serverTimestamp, arrayUnion, arrayRemove }
+    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  import { getStorage, ref, uploadString, getDownloadURL, deleteObject }
+    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
+  window._fbModules = { initializeApp, getAuth, signInWithEmailAndPassword,
+    createUserWithEmailAndPassword, onAuthStateChanged, signOut,
+    getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot,
+    addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp,
+    arrayUnion, arrayRemove, getStorage, ref, uploadString, getDownloadURL, deleteObject };
+  window._fbReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 </head>
 <body>
 
@@ -850,6 +1039,103 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
     </div>
     <div id="cal-grid"><div class="cal-weeks" id="cal-weeks"></div></div>
   </div>
+
+  <!-- NOTIFICATIONS -->
+  <div id="notif-view">
+    <div id="notif-head">
+      <h3>🔔 お知らせ</h3>
+      <button id="notif-read-all" onclick="markAllRead()">すべて既読</button>
+    </div>
+    <div id="notif-list"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings-view">
+    <div id="user-bar">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div>
+        <div class="user-name" id="user-name-display">未ログイン</div>
+        <div class="user-email" id="user-email-display"></div>
+      </div>
+    </div>
+    <div id="settings-scroll">
+      <div class="settings-section">
+        <div class="settings-section-title">プロフィール</div>
+        <div class="settings-row" onclick="openEditNickname()">
+          <div class="settings-icon">👤</div>
+          <div class="settings-label">
+            <div class="settings-label-main">ニックネームを変更</div>
+            <div class="settings-label-sub" id="settings-nickname-sub"></div>
+          </div>
+          <div class="settings-arrow">›</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">共有・メンバー</div>
+        <div class="settings-row" onclick="openInviteSheet()">
+          <div class="settings-icon">🔗</div>
+          <div class="settings-label">
+            <div class="settings-label-main">招待リンクを発行</div>
+            <div class="settings-label-sub">メンバーを招待・管理</div>
+          </div>
+          <div class="settings-arrow">›</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">地図</div>
+        <div class="settings-row" onclick="openApiModal()">
+          <div class="settings-icon">🔑</div>
+          <div class="settings-label">
+            <div class="settings-label-main">Google API キー</div>
+            <div class="settings-label-sub" id="settings-apikey-sub">未設定</div>
+          </div>
+          <div class="settings-arrow">›</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">データ</div>
+        <div class="settings-row" onclick="openMigrateSheet()">
+          <div class="settings-icon">☁️</div>
+          <div class="settings-label">
+            <div class="settings-label-main">クラウドに移行</div>
+            <div class="settings-label-sub">ローカルデータをFirebaseに転送</div>
+          </div>
+          <div class="settings-arrow">›</div>
+        </div>
+        <div class="settings-row" onclick="exportCSV()">
+          <div class="settings-icon">📤</div>
+          <div class="settings-label">
+            <div class="settings-label-main">CSVエクスポート</div>
+            <div class="settings-label-sub" id="settings-data-sub"></div>
+          </div>
+          <div class="settings-arrow">›</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">アプリ</div>
+        <div class="settings-row" onclick="location.reload(true)">
+          <div class="settings-icon">🔄</div>
+          <div class="settings-label">
+            <div class="settings-label-main">最新版に更新</div>
+            <div class="settings-label-sub">強制リロード</div>
+          </div>
+        </div>
+        <div class="settings-row danger" onclick="confirmSignOut()">
+          <div class="settings-icon">🚪</div>
+          <div class="settings-label">
+            <div class="settings-label-main" style="color:var(--danger)">ログアウト</div>
+          </div>
+        </div>
+        <div class="settings-row danger" onclick="confirmDeleteAll()">
+          <div class="settings-icon">🗑</div>
+          <div class="settings-label">
+            <div class="settings-label-main" style="color:var(--danger)">全データを削除</div>
+            <div class="settings-label-sub">ローカルデータをすべて削除</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div><!-- /#main -->
 
 <!-- Toast -->
@@ -859,8 +1145,36 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 <div id="tag-view">
   <div id="tag-view-head">
     <span>🏷 タグ管理</span>
+    <button onclick="openCreateTagSheet()"
+      style="font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+      background:var(--accent);color:#000;border:none;border-radius:8px;
+      padding:7px 14px;cursor:pointer;min-height:36px">
+      ＋ 新規タグ
+    </button>
   </div>
   <div id="tag-view-list"></div>
+</div>
+
+<!-- CREATE TAG SHEET -->
+<div class="modal-bg" id="create-tag-modal">
+  <div class="modal-sheet">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <h3>🏷 新しいタグを作成</h3>
+      <p>店舗への紐付けなしでタグを作成できます</p>
+    </div>
+    <div class="ms-body">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">マーク</div>
+      <div id="ct-mark-row" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">カラー</div>
+      <div id="ct-color-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <input class="mfield" id="ct-tag-input" type="text" placeholder="タグ名を入力...">
+      <div class="mbtns">
+        <button class="mbtn-cancel" onclick="closeCreateTagSheet()">キャンセル</button>
+        <button class="mbtn-ok" onclick="createTag()">作成</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- BOTTOM TABS -->
@@ -880,6 +1194,14 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <div class="tab" id="tab-tag" onclick="switchTab('tag')">
     <div class="tab-icon">🏷</div>
     <div>タグ</div>
+  </div>
+  <div class="tab" id="tab-notif" onclick="switchTab('notif')">
+    <div class="tab-icon">🔔</div>
+    <div>通知</div>
+  </div>
+  <div class="tab" id="tab-settings" onclick="switchTab('settings')">
+    <div class="tab-icon">⚙️</div>
+    <div>設定</div>
   </div>
 </div>
 
@@ -946,6 +1268,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <button id="lb-close" onclick="closeLightbox()">✕ 閉じる</button>
 </div>
 
+
 <!-- TAG MODAL -->
 <div class="modal-bg" id="tag-modal">
   <div class="modal-sheet">
@@ -1010,6 +1333,489 @@ let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
 // calEntries: [{date:'2026-04-18', placeId:'p_xxx'}, ...]
 let calEntries=JSON.parse(localStorage.getItem('pb_cal')||'[]');
 let calActiveDate=null; // currently open date string 'YYYY-MM-DD'
+
+
+// ── FIREBASE CONFIG ────────────────────────────────────────────
+// Firebaseの設定値をここに入力してください
+const FIREBASE_CONFIG = {
+  // Firebase Consoleから取得した設定値を以下に貼り付けてください
+  // apiKey: "AIzaSy...",
+  // authDomain: "your-app.firebaseapp.com",
+  // projectId: "your-app",
+  // storageBucket: "your-app.appspot.com",
+  // messagingSenderId: "123456789",
+  // appId: "1:123456789:web:abcdef"
+};
+const FB_CONFIGURED = Object.keys(FIREBASE_CONFIG).length > 0 &&
+  FIREBASE_CONFIG.apiKey !== undefined;
+
+let fbApp=null, fbAuth=null, fbDb=null, fbStorage=null;
+let currentUser=null;
+let notifUnsubscribe=null, placesUnsubscribe=null;
+let unreadCount=0;
+
+async function initFirebase(){
+  if(!FB_CONFIGURED) return;
+  // Wait for Firebase modules
+  if(!window._fbReady){
+    await new Promise(res=>window.addEventListener('firebase-ready',res,{once:true}));
+  }
+  const {initializeApp,getAuth,getFirestore,getStorage,onAuthStateChanged}=window._fbModules;
+  try{
+    fbApp=initializeApp(FIREBASE_CONFIG);
+    fbAuth=getAuth(fbApp);
+    fbDb=getFirestore(fbApp);
+    fbStorage=getStorage(fbApp);
+    onAuthStateChanged(fbAuth, handleAuthChange);
+  } catch(e){ console.error('Firebase init error:',e); }
+}
+
+async function handleAuthChange(user){
+  currentUser=user;
+  if(user){
+    // Logged in
+    document.getElementById('auth-screen').classList.add('hidden');
+    updateUserBar(user);
+    await loadUserProfile(user.uid);
+    startRealtimeListeners();
+    updateSettingsPage();
+  } else {
+    // Logged out - show auth screen only if Firebase is configured
+    if(FB_CONFIGURED){
+      document.getElementById('auth-screen').classList.remove('hidden');
+    }
+  }
+}
+
+// ── AUTH ───────────────────────────────────────────────────────
+let authMode='login';
+function setAuthMode(mode){
+  authMode=mode;
+  document.getElementById('auth-btn-login').classList.toggle('on',mode==='login');
+  document.getElementById('auth-btn-register').classList.toggle('on',mode==='register');
+  document.getElementById('auth-title').textContent=mode==='login'?'ログイン':'新規登録';
+  document.getElementById('auth-submit').textContent=mode==='login'?'ログイン':'登録';
+  document.getElementById('auth-name').style.display=mode==='register'?'block':'none';
+  document.getElementById('auth-err').textContent='';
+  // Check invite token
+  const token=getInviteToken();
+  if(token&&mode==='register'){
+    document.getElementById('auth-err').style.color='var(--accent)';
+    document.getElementById('auth-err').textContent='招待リンクから登録中';
+  }
+}
+
+function getInviteToken(){
+  return new URLSearchParams(window.location.search).get('invite');
+}
+
+async function submitAuth(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-pass').value;
+  const name=document.getElementById('auth-name').value.trim();
+  const errEl=document.getElementById('auth-err');
+  errEl.style.color='var(--danger)';
+  errEl.textContent='';
+  if(!email||!pass){ errEl.textContent='メールアドレスとパスワードを入力してください'; return; }
+  if(authMode==='register'&&!name){ errEl.textContent='ニックネームを入力してください'; return; }
+  const btn=document.getElementById('auth-submit');
+  btn.disabled=true; btn.textContent='処理中...';
+  try{
+    const {signInWithEmailAndPassword,createUserWithEmailAndPassword}=window._fbModules;
+    if(authMode==='login'){
+      await signInWithEmailAndPassword(fbAuth,email,pass);
+    } else {
+      const cred=await createUserWithEmailAndPassword(fbAuth,email,pass);
+      // Save profile
+      await saveUserProfile(cred.user.uid, name, email);
+      // Process invite token
+      const token=getInviteToken();
+      if(token) await processInviteToken(cred.user.uid, token, name);
+    }
+  } catch(e){
+    const msgs={
+      'auth/user-not-found':'メールアドレスが見つかりません',
+      'auth/wrong-password':'パスワードが間違っています',
+      'auth/email-already-in-use':'このメールは既に登録済みです',
+      'auth/invalid-email':'メールアドレスの形式が正しくありません',
+      'auth/weak-password':'パスワードは6文字以上にしてください',
+    };
+    errEl.textContent=msgs[e.code]||'エラー: '+e.message;
+    btn.disabled=false;
+    btn.textContent=authMode==='login'?'ログイン':'登録';
+  }
+}
+
+async function confirmSignOut(){
+  if(!confirm('ログアウトしますか？')) return;
+  if(notifUnsubscribe) notifUnsubscribe();
+  if(placesUnsubscribe) placesUnsubscribe();
+  await window._fbModules.signOut(fbAuth);
+  showToast('ログアウトしました');
+}
+
+// ── USER PROFILE ───────────────────────────────────────────────
+let userProfile=null;
+
+async function saveUserProfile(uid, nickname, email){
+  const {doc,setDoc,serverTimestamp}=window._fbModules;
+  await setDoc(doc(fbDb,'users',uid),{
+    nickname, email, createdAt:serverTimestamp(), role:'member'
+  });
+  userProfile={nickname,email,role:'member'};
+}
+
+async function loadUserProfile(uid){
+  const {doc,getDoc}=window._fbModules;
+  const snap=await getDoc(doc(fbDb,'users',uid));
+  if(snap.exists()) userProfile=snap.data();
+  else userProfile=null;
+}
+
+function getNickname(){
+  return userProfile?.nickname || currentUser?.email?.split('@')[0] || '名無し';
+}
+
+function updateUserBar(user){
+  const name=getNickname();
+  const avatar=document.getElementById('user-avatar');
+  const nameEl=document.getElementById('user-name-display');
+  const emailEl=document.getElementById('user-email-display');
+  if(avatar) avatar.textContent=(name[0]||'?').toUpperCase();
+  if(nameEl) nameEl.textContent=name;
+  if(emailEl) emailEl.textContent=user.email||'';
+}
+
+function updateSettingsPage(){
+  const key=localStorage.getItem('pb_apikey');
+  const apiSub=document.getElementById('settings-apikey-sub');
+  if(apiSub) apiSub.textContent=key?'設定済み':'未設定';
+  const dataSub=document.getElementById('settings-data-sub');
+  if(dataSub) dataSub.textContent=`${places.length}件の店舗データ`;
+  const nickSub=document.getElementById('settings-nickname-sub');
+  if(nickSub) nickSub.textContent=getNickname();
+}
+
+function openEditNickname(){
+  const inp=document.getElementById('nickname-input');
+  if(inp) inp.value=getNickname();
+  document.getElementById('nickname-modal').classList.add('show');
+  setTimeout(()=>inp&&inp.focus(),300);
+}
+function closeNicknameModal(){
+  document.getElementById('nickname-modal').classList.remove('show');
+}
+async function saveNickname(){
+  const val=document.getElementById('nickname-input').value.trim();
+  if(!val){ showToast('ニックネームを入力してください'); return; }
+  if(!currentUser){ showToast('ログインが必要です'); return; }
+  const {doc,updateDoc}=window._fbModules;
+  await updateDoc(doc(fbDb,'users',currentUser.uid),{nickname:val});
+  if(userProfile) userProfile.nickname=val;
+  updateUserBar(currentUser);
+  updateSettingsPage();
+  closeNicknameModal();
+  showToast(`ニックネームを「${val}」に変更しました`);
+}
+
+// ── INVITE SYSTEM ──────────────────────────────────────────────
+let currentInviteToken=null;
+
+async function openInviteSheet(){
+  if(!currentUser||!FB_CONFIGURED){
+    showToast('ログインが必要です'); return;
+  }
+  // Generate or get existing invite token
+  const {doc,getDoc,setDoc,serverTimestamp,collection,getDocs,query,where}=window._fbModules;
+  const uid=currentUser.uid;
+  // Check if user is owner
+  const userSnap=await getDoc(doc(fbDb,'users',uid));
+  // Generate token
+  const token=btoa(uid+':'+Date.now()).replace(/[+=\/]/g,'');
+  currentInviteToken=token;
+  const inviteUrl=window.location.href.split('?')[0]+'?invite='+token;
+  document.getElementById('inv-link-display').textContent=inviteUrl;
+  // Save token to Firestore
+  await setDoc(doc(fbDb,'invites',token),{
+    createdBy:uid, createdAt:serverTimestamp(), active:true
+  });
+  // Load members
+  await loadMembers();
+  document.getElementById('invite-sheet').classList.add('open');
+}
+
+function closeInviteSheet(){
+  document.getElementById('invite-sheet').classList.remove('open');
+}
+
+function copyInviteLink(){
+  const txt=document.getElementById('inv-link-display').textContent;
+  navigator.clipboard?.writeText(txt).then(()=>showToast('リンクをコピーしました'))
+    .catch(()=>{
+      // Fallback
+      const el=document.createElement('textarea');
+      el.value=txt; document.body.appendChild(el);
+      el.select(); document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('リンクをコピーしました');
+    });
+}
+
+async function loadMembers(){
+  const {collection,getDocs}=window._fbModules;
+  const snap=await getDocs(collection(fbDb,'users'));
+  const members=[];
+  snap.forEach(d=>members.push({id:d.id,...d.data()}));
+  const list=document.getElementById('inv-members-list');
+  if(!list) return;
+  list.innerHTML=members.map(m=>`
+    <div class="inv-member-row">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);
+        display:flex;align-items:center;justify-content:center;
+        font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:#000">
+        ${(m.nickname||'?')[0].toUpperCase()}
+      </div>
+      <div class="inv-member-name">
+        ${esc(m.nickname||m.email||'名無し')}
+        ${m.id===currentUser?.uid?'<span style="font-size:10px;color:var(--muted)">（あなた）</span>':''}
+      </div>
+      <span class="inv-member-status inv-status-active">参加中</span>
+    </div>`).join('')||'<div style="color:var(--muted);font-size:12px;padding:12px">メンバーなし</div>';
+}
+
+async function processInviteToken(uid, token, nickname){
+  const {doc,getDoc,updateDoc,serverTimestamp}=window._fbModules;
+  try{
+    const invSnap=await getDoc(doc(fbDb,'invites',token));
+    if(invSnap.exists()&&invSnap.data().active){
+      // Token valid - user profile already created, just log
+      await updateDoc(doc(fbDb,'invites',token),{
+        usedBy:uid, usedAt:serverTimestamp()
+      });
+    }
+  } catch(e){ console.error('Invite processing error:',e); }
+}
+
+// ── REALTIME SYNC ──────────────────────────────────────────────
+function startRealtimeListeners(){
+  if(!fbDb||!currentUser) return;
+  const {collection,query,orderBy,onSnapshot}=window._fbModules;
+  // Listen for notifications
+  const notifQ=query(collection(fbDb,'notifications'),orderBy('createdAt','desc'));
+  if(notifUnsubscribe) notifUnsubscribe();
+  notifUnsubscribe=onSnapshot(notifQ, snap=>{
+    const notifs=[];
+    snap.forEach(d=>notifs.push({id:d.id,...d.data()}));
+    updateNotifications(notifs);
+  });
+  // Listen for places
+  const placesQ=query(collection(fbDb,'places'));
+  if(placesUnsubscribe) placesUnsubscribe();
+  placesUnsubscribe=onSnapshot(placesQ, snap=>{
+    const cloudPlaces=[];
+    snap.forEach(d=>cloudPlaces.push({...d.data(),id:d.id}));
+    if(cloudPlaces.length>0){
+      mergeCloudPlaces(cloudPlaces);
+    }
+  });
+}
+
+function mergeCloudPlaces(cloudPlaces){
+  // Add cloud places not already in local
+  let changed=false;
+  cloudPlaces.forEach(cp=>{
+    const exists=places.find(p=>p.id===cp.id);
+    if(!exists){
+      places.unshift(cp);
+      changed=true;
+    }
+  });
+  if(changed){
+    save(); renderAll();
+    if(gmap) places.forEach(p=>{ if(p.lat&&!markers[p.id]) addMarker(p); });
+  }
+}
+
+// ── NOTIFICATIONS ──────────────────────────────────────────────
+let allNotifs=[];
+let readNotifIds=JSON.parse(localStorage.getItem('pb_read_notifs')||'[]');
+
+function updateNotifications(notifs){
+  allNotifs=notifs;
+  const unread=notifs.filter(n=>!readNotifIds.includes(n.id));
+  unreadCount=unread.length;
+  // Update badge
+  updateNotifBadge();
+  // If notifications tab is open, re-render
+  if(currentTab==='notif') renderNotifList();
+}
+
+function updateNotifBadge(){
+  const tabEl=document.getElementById('tab-notif');
+  if(!tabEl) return;
+  let badge=tabEl.querySelector('.tab-badge');
+  if(unreadCount>0){
+    if(!badge){
+      badge=document.createElement('div');
+      badge.className='tab-badge';
+      tabEl.appendChild(badge);
+    }
+    badge.textContent=unreadCount>9?'9+':unreadCount;
+  } else {
+    if(badge) badge.remove();
+  }
+}
+
+function renderNotifList(){
+  const list=document.getElementById('notif-list');
+  if(!list) return;
+  if(!allNotifs.length){
+    list.innerHTML='<div class="notif-empty">まだお知らせはありません<br>メンバーの操作が通知されます</div>';
+    return;
+  }
+  list.innerHTML=allNotifs.map(n=>{
+    const isUnread=!readNotifIds.includes(n.id);
+    const time=n.createdAt?.toDate?n.createdAt.toDate():new Date(n.createdAt||Date.now());
+    const timeStr=formatRelativeTime(time);
+    const icons={add:'📍',photo:'📷',memo:'📝',tag:'🏷',delete:'🗑'};
+    const icon=icons[n.type]||'🔔';
+    return `<div class="notif-card${isUnread?' unread':''}" onclick="notifClick('${n.id}','${n.placeId||''}')">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <span class="notif-icon">${icon}</span>
+        <div>
+          <div class="notif-text">${esc(n.text||'')}</div>
+          <div class="notif-time">${timeStr}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function notifClick(notifId, placeId){
+  // Mark as read
+  if(!readNotifIds.includes(notifId)){
+    readNotifIds.push(notifId);
+    localStorage.setItem('pb_read_notifs',JSON.stringify(readNotifIds));
+    updateNotifBadge();
+    renderNotifList();
+  }
+  // Navigate to place if applicable
+  if(placeId){
+    const p=places.find(x=>x.id===placeId);
+    if(p){ switchTab('map'); setTimeout(()=>{flyTo(p);openDetail(placeId);},300); }
+  }
+}
+
+function markAllRead(){
+  readNotifIds=[...readNotifIds,...allNotifs.map(n=>n.id)];
+  readNotifIds=[...new Set(readNotifIds)];
+  localStorage.setItem('pb_read_notifs',JSON.stringify(readNotifIds));
+  unreadCount=0;
+  updateNotifBadge();
+  renderNotifList();
+}
+
+async function addNotification(type, text, placeId=''){
+  if(!fbDb||!currentUser) return;
+  const {collection,addDoc,serverTimestamp}=window._fbModules;
+  try{
+    await addDoc(collection(fbDb,'notifications'),{
+      type, text, placeId,
+      createdBy:currentUser.uid,
+      createdByName:getNickname(),
+      createdAt:serverTimestamp(),
+    });
+  } catch(e){ console.error('Notification error:',e); }
+}
+
+function formatRelativeTime(date){
+  const diff=Date.now()-date.getTime();
+  const mins=Math.floor(diff/60000);
+  const hours=Math.floor(diff/3600000);
+  const days=Math.floor(diff/86400000);
+  if(mins<1) return 'たった今';
+  if(mins<60) return `${mins}分前`;
+  if(hours<24) return `${hours}時間前`;
+  if(days<7) return `${days}日前`;
+  return date.toLocaleDateString('ja-JP');
+}
+
+// ── CLOUD DATA SYNC ────────────────────────────────────────────
+async function syncPlaceToCloud(p){
+  if(!fbDb||!currentUser) return;
+  const {doc,setDoc,serverTimestamp}=window._fbModules;
+  try{
+    await setDoc(doc(fbDb,'places',p.id),{
+      ...p, photos:[],// photos stored separately in Storage
+      updatedAt:serverTimestamp(),
+      updatedBy:currentUser.uid,
+    },{merge:true});
+  } catch(e){ console.error('Sync error:',e); }
+}
+
+// ── MIGRATION ──────────────────────────────────────────────────
+function openMigrateSheet(){
+  document.getElementById('migrate-sheet').classList.add('open');
+  document.getElementById('mig-status').innerHTML='<span>移行の準備ができています</span>';
+  document.getElementById('mig-bar').style.width='0%';
+  document.getElementById('mig-start-btn').disabled=false;
+  document.getElementById('mig-start-btn').textContent='移行開始';
+}
+function closeMigrateSheet(){
+  document.getElementById('migrate-sheet').classList.remove('open');
+}
+
+async function startMigration(){
+  if(!fbDb||!currentUser){
+    showToast('ログインが必要です'); return;
+  }
+  const btn=document.getElementById('mig-start-btn');
+  btn.disabled=true; btn.textContent='移行中...';
+  const statusEl=document.getElementById('mig-status');
+  const barEl=document.getElementById('mig-bar');
+  const {doc,setDoc,serverTimestamp,ref,uploadString,getStorage}=window._fbModules;
+  let done=0; const total=places.length;
+  for(const p of places){
+    statusEl.innerHTML=`<span>📍 ${esc(p.name)} を移行中... (${done+1}/${total})</span>`;
+    barEl.style.width=Math.round((done/total)*100)+'%';
+    // Migrate place data
+    try{
+      await setDoc(doc(fbDb,'places',p.id),{
+        ...p, photos:[],
+        migratedAt:serverTimestamp(),
+        migratedBy:currentUser.uid,
+      },{merge:true});
+    }catch(e){ console.error('Place migration error:',p.name,e); }
+    // Migrate photos
+    try{
+      const photos=await getPhotos(p.id);
+      for(let i=0;i<photos.length;i++){
+        const ph=photos[i];
+        const storage=fbStorage||getStorage(fbApp);
+        const photoRef=ref(storage,`photos/${p.id}/${ph.id}`);
+        await uploadString(photoRef,ph.blob,'data_url');
+        statusEl.innerHTML=`<span>📷 ${esc(p.name)} 写真${i+1}/${photos.length}枚...</span>`;
+      }
+    }catch(e){ console.error('Photo migration error:',p.name,e); }
+    done++;
+  }
+  barEl.style.width='100%';
+  statusEl.innerHTML='<span style="color:var(--accent)">✓ 移行完了！ '+total+'件のデータを転送しました</span>';
+  btn.textContent='完了';
+  showToast('クラウドへの移行が完了しました');
+}
+
+// ── OVERRIDE pushPlace TO SYNC ─────────────────────────────────
+const _origPushPlace=window.pushPlace;
+async function pushPlaceWithSync(p){
+  pushPlace(p);
+  if(fbDb&&currentUser){
+    await syncPlaceToCloud(p);
+    const name=getNickname();
+    await addNotification('add',`${name} が「${p.name}」を追加しました`,p.id);
+  }
+}
+
 
 function saveCal(){localStorage.setItem('pb_cal',JSON.stringify(calEntries))}
 
@@ -1117,6 +1923,12 @@ function deleteAllPhotos(placeId){
 // ── INIT ──────────────────────────────────────────────────────
 window.onload=async function(){
   await initDB();
+  // Init Firebase (non-blocking)
+  initFirebase().catch(console.error);
+  // If Firebase not configured, hide auth screen
+  if(!FB_CONFIGURED){
+    document.getElementById('auth-screen').classList.add('hidden');
+  }
   const key=localStorage.getItem('pb_apikey');
   if(key) initMap(key);
   renderAll();
@@ -1130,9 +1942,11 @@ window.onload=async function(){
   });
   document.getElementById('new-tag-input').addEventListener('keydown',e=>{if(e.key==='Enter')addTag()});
   document.getElementById('ss-new-tag-input').addEventListener('keydown',e=>{if(e.key==='Enter')ssAddNewTag()});
+  document.getElementById('ct-tag-input').addEventListener('keydown',e=>{if(e.key==='Enter')createTag()});
+  document.getElementById('nickname-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveNickname()});
   document.getElementById('apikey-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveApiKey()});
   document.querySelectorAll('.modal-bg').forEach(bg=>
-    bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('show')}));
+    bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('show');}}));
   buildColorRow();
   initPhotoInputs();
   // Touch swipe to close detail sheet
@@ -1197,15 +2011,19 @@ function showToast(msg, ms=2000){
 function switchTab(tab){
   const prevTab=currentTab;
   currentTab=tab;
-  ['map','list','cal','tag'].forEach(t=>{
+  ['map','list','cal','tag','notif','settings'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.classList.toggle('active',t===tab);
   });
   document.getElementById('list-view').classList.toggle('show',tab==='list');
   document.getElementById('cal-view').classList.toggle('show',tab==='cal');
   document.getElementById('tag-view').classList.toggle('show',tab==='tag');
+  document.getElementById('notif-view').classList.toggle('show',tab==='notif');
+  document.getElementById('settings-view').classList.toggle('show',tab==='settings');
   if(tab==='cal') renderCalendar();
   if(tab==='tag') renderTagView();
+  if(tab==='notif'){ renderNotifList(); markAllRead(); }
+  if(tab==='settings') updateSettingsPage();
 }
 
 // ── SHEET SWIPE DOWN TO CLOSE (only on handle, not whole sheet) ──
@@ -1757,6 +2575,11 @@ function saveMemo(id){
   save();renderList();
   const b=document.getElementById('memo-saved');
   if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000)}
+  // Sync
+  if(fbDb&&currentUser){
+    syncPlaceToCloud(p).catch(console.error);
+    addNotification('memo', getNickname()+'が「'+p.name+'」のメモを更新しました', id).catch(console.error);
+  }
 }
 
 // ── PHOTOS ────────────────────────────────────────────────────
@@ -1766,9 +2589,13 @@ async function handlePhotoFile(e, placeId){
   try{
     await savePhotos(placeId, files);
     e.target.value='';
-    // Re-render the detail sheet to show the new photos
     if(activeCardId===placeId) await openDetail(placeId);
-    else if(!activeCardId) await openDetail(placeId); // detail was closed, reopen
+    else if(!activeCardId) await openDetail(placeId);
+    // Notify
+    const p=places.find(x=>x.id===placeId);
+    if(fbDb&&currentUser&&p){
+      addNotification('photo', getNickname()+'が「'+p.name+'」に写真を追加しました', placeId).catch(console.error);
+    }
   } catch(err){
     alert('写真の保存に失敗: '+err);
   }
@@ -1901,6 +2728,64 @@ function tvRemoveTag(placeId, tag){
   if(gmap&&markers[p.id]) addMarker(p);
   renderTagView();
   showToast(`"${tag}" を外しました`);
+}
+
+// ── CREATE TAG (standalone) ────────────────────────────────────
+let ctSelectedColor=TAG_COLORS[0];
+let ctSelectedMark=MARK_OPTIONS[0];
+
+function openCreateTagSheet(){
+  ctSelectedColor=TAG_COLORS[0];
+  ctSelectedMark=MARK_OPTIONS[0];
+  document.getElementById('ct-tag-input').value='';
+  buildCtMarkRow();
+  buildCtColorRow();
+  document.getElementById('create-tag-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('ct-tag-input').focus(),300);
+}
+function closeCreateTagSheet(){
+  document.getElementById('create-tag-modal').classList.remove('show');
+}
+function buildCtMarkRow(){
+  document.getElementById('ct-mark-row').innerHTML=MARK_OPTIONS.map(mk=>`
+    <div onclick="pickCtMark('${mk}')"
+      style="width:36px;height:36px;border-radius:8px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:18px;
+      background:${mk===ctSelectedMark?'var(--surface3)':'var(--surface2)'};
+      border:2px solid ${mk===ctSelectedMark?'var(--accent)':'var(--border)'}">
+      ${mk}
+    </div>`).join('');
+}
+function buildCtColorRow(){
+  document.getElementById('ct-color-row').innerHTML=TAG_COLORS.map(c=>`
+    <div class="cdot${c===ctSelectedColor?' sel':''}" style="background:${c}"
+      onclick="pickCtColor('${c}')"></div>`).join('');
+}
+function pickCtMark(mk){ ctSelectedMark=mk; buildCtMarkRow(); }
+function pickCtColor(c){ ctSelectedColor=c; buildCtColorRow(); }
+function createTag(){
+  const val=document.getElementById('ct-tag-input').value.trim();
+  if(!val){ showToast('タグ名を入力してください'); return; }
+  if(tagColorMap[val]!==undefined){ showToast(`"${val}" はすでに存在します`); return; }
+  tagColorMap[val]=ctSelectedColor;
+  tagMarkMap[val]=ctSelectedMark;
+  save();
+  closeCreateTagSheet();
+  renderTagView();
+  renderFilterChips();
+  showToast(`${ctSelectedMark} "${val}" を作成しました`);
+}
+
+function confirmDeleteAll(){
+  if(!confirm('全データを削除しますか？\nこの操作は取り消せません。')) return;
+  localStorage.removeItem('pb_places');
+  localStorage.removeItem('pb_cal');
+  localStorage.removeItem('pb_tagcolors');
+  localStorage.removeItem('pb_tagmarks');
+  places=[];calEntries=[];tagColorMap={};tagMarkMap={};
+  save();saveCal();renderAll();
+  if(gmap) Object.keys(markers).forEach(removeMarker);
+  showToast('すべてのローカルデータを削除しました');
 }
 
 // ── DELETE ────────────────────────────────────────────────────
@@ -2121,5 +3006,90 @@ function darkStyle(){
   ];
 }
 </script>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-logo">◈ Cafe List</div>
+  <div class="auth-sub">ログインして使い始めましょう</div>
+  <div class="auth-card">
+    <div class="auth-mode-toggle">
+      <button class="auth-mode-btn on" id="auth-btn-login" onclick="setAuthMode('login')">ログイン</button>
+      <button class="auth-mode-btn" id="auth-btn-register" onclick="setAuthMode('register')">新規登録</button>
+    </div>
+    <div class="auth-title" id="auth-title">ログイン</div>
+    <div class="auth-err" id="auth-err"></div>
+    <input class="auth-input" id="auth-name" type="text" placeholder="ニックネーム" style="display:none" autocomplete="nickname">
+    <input class="auth-input" id="auth-email" type="email" placeholder="メールアドレス" autocomplete="email">
+    <input class="auth-input" id="auth-pass" type="password" placeholder="パスワード（6文字以上）" autocomplete="current-password">
+    <button class="auth-btn" id="auth-submit" onclick="submitAuth()">ログイン</button>
+    <div style="text-align:center;font-size:11px;color:var(--muted)">
+      招待リンクから登録する場合は「新規登録」を選択してください
+    </div>
+  </div>
+</div>
+
+<!-- INVITE SHEET -->
+<div id="invite-sheet">
+  <div class="inv-handle"></div>
+  <div id="inv-head">
+    <h3>🔗 メンバー管理</h3>
+    <button style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer" onclick="closeInviteSheet()">✕</button>
+  </div>
+  <div id="inv-body">
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">招待リンク</div>
+      <div class="inv-link-box" id="inv-link-display">生成中...</div>
+      <button onclick="copyInviteLink()"
+        style="width:100%;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;
+        background:var(--accent);color:#000;border:none;border-radius:10px;
+        padding:12px;cursor:pointer;min-height:44px">
+        📋 リンクをコピー
+      </button>
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">メンバー一覧</div>
+      <div id="inv-members-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MIGRATE SHEET -->
+<div id="migrate-sheet">
+  <div class="mig-handle"></div>
+  <div id="mig-body">
+    <div class="mig-title">☁️ クラウドに移行</div>
+    <div class="mig-desc">
+      ローカルに保存されているすべての店舗データ・タグ・メモをFirebaseに転送します。写真も含めて移行されます。
+    </div>
+    <div class="mig-progress" id="mig-status"><span>移行の準備ができています</span></div>
+    <div class="mig-bar-wrap"><div class="mig-bar" id="mig-bar"></div></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="closeMigrateSheet()"
+        style="font-family:'DM Mono',monospace;font-size:13px;
+        background:transparent;color:var(--muted);border:1px solid var(--border);
+        border-radius:10px;padding:12px 18px;cursor:pointer">キャンセル</button>
+      <button id="mig-start-btn" onclick="startMigration()"
+        style="flex:1;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;
+        background:var(--accent);color:#000;border:none;border-radius:10px;
+        padding:12px;cursor:pointer;min-height:44px">移行開始</button>
+    </div>
+  </div>
+</div>
+
+<!-- NICKNAME MODAL -->
+<div class="modal-bg" id="nickname-modal">
+  <div class="modal-sheet">
+    <div class="ms-handle"></div>
+    <div class="ms-head"><h3>👤 ニックネームを変更</h3></div>
+    <div class="ms-body">
+      <input class="mfield" id="nickname-input" type="text" placeholder="新しいニックネーム" autocomplete="nickname">
+      <div class="mbtns">
+        <button class="mbtn-cancel" onclick="closeNicknameModal()">キャンセル</button>
+        <button class="mbtn-ok" onclick="saveNickname()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
