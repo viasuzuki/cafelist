@@ -135,7 +135,7 @@ body{
 }
 #filter-toprow{
   display:flex;align-items:center;gap:8px;
-  padding:calc(var(--safe-top) + 10px) 14px 10px;
+  padding:10px 14px;
 }
 .filter-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 #filter-toggle-btn{
@@ -468,7 +468,7 @@ body{
 
 #cal-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:calc(var(--safe-top) + 14px) 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
+  padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
 }
 .cal-nav{
   width:40px;height:40px;border-radius:10px;
@@ -949,25 +949,20 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 #lb-close:active{opacity:1}
 </style>
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-           onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs,
-           onSnapshot, addDoc, updateDoc, deleteDoc, query, where,
-           orderBy, serverTimestamp, arrayUnion, arrayRemove }
-    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-  import { getStorage, ref, uploadString, getDownloadURL, deleteObject }
-    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
-  window._fbModules = { initializeApp, getAuth, signInWithEmailAndPassword,
-    createUserWithEmailAndPassword, onAuthStateChanged, signOut,
-    getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot,
-    addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp,
-    arrayUnion, arrayRemove, getStorage, ref, uploadString, getDownloadURL, deleteObject };
-  window._fbReady = true;
-  window.dispatchEvent(new Event('firebase-ready'));
-</script>
+<!-- Eruda mobile debugger (temporary) -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
+<!-- Firebase v8 via jsDelivr CDN -->
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"
+  onload="console.log('firebase-app.js OK')"
+  onerror="console.error('firebase-app.js FAILED')"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js"
+  onload="console.log('firebase-auth.js OK')"
+  onerror="console.error('firebase-auth.js FAILED')"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-firestore.js"
+  onload="console.log('firebase-firestore.js OK')"
+  onerror="console.error('firebase-firestore.js FAILED')"></script>
 </head>
 <body>
 
@@ -1356,16 +1351,12 @@ let calEntries=JSON.parse(localStorage.getItem('pb_cal')||'[]');
 let calActiveDate=null; // currently open date string 'YYYY-MM-DD'
 
 
-// ── FIREBASE CONFIG ────────────────────────────────────────────
-// Firebaseの設定値をここに入力してください
-// Load Firebase config from localStorage if available
-
-// Cloudinary config (unsigned upload - safe to embed)
+// Cloudinary config
 const CLOUDINARY_CLOUD = 'dgcyagj8h';
 const CLOUDINARY_PRESET = 'rmn4hc91';
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`;
 
-// Firebase config (embedded)
+// ── FIREBASE CONFIG ──────────────────────────────────────────
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDmiUiGa2ARJEPyilHS7Ls7GwQOvxXtlEE",
   authDomain: "cafe-list2026.firebaseapp.com",
@@ -1375,8 +1366,6 @@ const FIREBASE_CONFIG = {
   appId: "1:388250635631:web:9cdc3cfac381322ae7ac9a"
 };
 const FB_CONFIGURED = true;
-// Also save to localStorage for settings display
-try { localStorage.setItem('pb_firebase_config', JSON.stringify(FIREBASE_CONFIG)); } catch(e){}
 
 let fbApp=null, fbAuth=null, fbDb=null, fbStorage=null;
 let currentUser=null;
@@ -1385,18 +1374,20 @@ let unreadCount=0;
 
 async function initFirebase(){
   if(!FB_CONFIGURED) return;
-  // Wait for Firebase modules
-  if(!window._fbReady){
-    await new Promise(res=>window.addEventListener('firebase-ready',res,{once:true}));
+  if(typeof firebase === 'undefined'){
+    console.error('Firebase SDK not loaded');
+    return;
   }
-  const {initializeApp,getAuth,getFirestore,getStorage,onAuthStateChanged}=window._fbModules;
   try{
-    fbApp=initializeApp(FIREBASE_CONFIG);
-    fbAuth=getAuth(fbApp);
-    fbDb=getFirestore(fbApp);
-    fbStorage=getStorage(fbApp);
-    onAuthStateChanged(fbAuth, handleAuthChange);
-  } catch(e){ console.error('Firebase init error:',e); }
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    fbApp = firebase.app();
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    firebase.auth().onAuthStateChanged(handleAuthChange);
+    console.log('Firebase initialized OK');
+  } catch(e){
+    console.error('Firebase init error:', e.message);
+  }
 }
 
 async function handleAuthChange(user){
@@ -1450,11 +1441,10 @@ async function submitAuth(){
   const btn=document.getElementById('auth-submit');
   btn.disabled=true; btn.textContent='処理中...';
   try{
-    const {signInWithEmailAndPassword,createUserWithEmailAndPassword}=window._fbModules;
     if(authMode==='login'){
-      await signInWithEmailAndPassword(fbAuth,email,pass);
+      await firebase.auth().signInWithEmailAndPassword(email,pass);
     } else {
-      const cred=await createUserWithEmailAndPassword(fbAuth,email,pass);
+      const cred=await firebase.auth().createUserWithEmailAndPassword(email,pass);
       // Save profile
       await saveUserProfile(cred.user.uid, name, email);
       // Process invite token
@@ -1479,7 +1469,7 @@ async function confirmSignOut(){
   if(!confirm('ログアウトしますか？')) return;
   if(notifUnsubscribe) notifUnsubscribe();
   if(placesUnsubscribe) placesUnsubscribe();
-  await window._fbModules.signOut(fbAuth);
+  await firebase.auth().signOut();
   showToast('ログアウトしました');
 }
 
@@ -1487,17 +1477,15 @@ async function confirmSignOut(){
 let userProfile=null;
 
 async function saveUserProfile(uid, nickname, email){
-  const {doc,setDoc,serverTimestamp}=window._fbModules;
-  await setDoc(doc(fbDb,'users',uid),{
-    nickname, email, createdAt:serverTimestamp(), role:'member'
+  await fbDb.collection('users').doc(uid).set({
+    nickname, email, createdAt:firebase.firestore.FieldValue.serverTimestamp(), role:'member'
   });
   userProfile={nickname,email,role:'member'};
 }
 
 async function loadUserProfile(uid){
-  const {doc,getDoc}=window._fbModules;
-  const snap=await getDoc(doc(fbDb,'users',uid));
-  if(snap.exists()) userProfile=snap.data();
+  const snap=await fbDb.collection('users').doc(uid).get();
+  if(snap.exists) userProfile=snap.data();
   else userProfile=null;
 }
 
@@ -1548,8 +1536,7 @@ async function saveNickname(){
   // Firebaseにも保存（ログイン中の場合のみ）
   if(currentUser && fbDb){
     try{
-      const {doc,updateDoc}=window._fbModules;
-      await updateDoc(doc(fbDb,'users',currentUser.uid),{nickname:val});
+      await fbDb.collection('users').doc(currentUser.uid).update({nickname:val});
     } catch(e){ console.error('Nickname sync error:',e); }
   }
   updateUserBar(currentUser);
@@ -1566,7 +1553,6 @@ async function openInviteSheet(){
     showToast('ログインが必要です'); return;
   }
   // Generate or get existing invite token
-  const {doc,getDoc,setDoc,serverTimestamp,collection,getDocs,query,where}=window._fbModules;
   const uid=currentUser.uid;
   // Check if user is owner
   const userSnap=await getDoc(doc(fbDb,'users',uid));
@@ -1576,8 +1562,8 @@ async function openInviteSheet(){
   const inviteUrl=window.location.href.split('?')[0]+'?invite='+token;
   document.getElementById('inv-link-display').textContent=inviteUrl;
   // Save token to Firestore
-  await setDoc(doc(fbDb,'invites',token),{
-    createdBy:uid, createdAt:serverTimestamp(), active:true
+  await fbDb.collection('invites').doc(token).set({
+    createdBy:uid, createdAt:firebase.firestore.FieldValue.serverTimestamp(), active:true
   });
   // Load members
   await loadMembers();
@@ -1602,8 +1588,7 @@ function copyInviteLink(){
 }
 
 async function loadMembers(){
-  const {collection,getDocs}=window._fbModules;
-  const snap=await getDocs(collection(fbDb,'users'));
+  const snap=await fbDb.collection('users').get();
   const members=[];
   snap.forEach(d=>members.push({id:d.id,...d.data()}));
   const list=document.getElementById('inv-members-list');
@@ -1624,13 +1609,11 @@ async function loadMembers(){
 }
 
 async function processInviteToken(uid, token, nickname){
-  const {doc,getDoc,updateDoc,serverTimestamp}=window._fbModules;
   try{
-    const invSnap=await getDoc(doc(fbDb,'invites',token));
-    if(invSnap.exists()&&invSnap.data().active){
-      // Token valid - user profile already created, just log
-      await updateDoc(doc(fbDb,'invites',token),{
-        usedBy:uid, usedAt:serverTimestamp()
+    const invSnap=await fbDb.collection('invites').doc(token).get();
+    if(invSnap.exists&&invSnap.data().active){
+      await fbDb.collection('invites').doc(token).update({
+        usedBy:uid, usedAt:firebase.firestore.FieldValue.serverTimestamp()
       });
     }
   } catch(e){ console.error('Invite processing error:',e); }
@@ -1639,24 +1622,17 @@ async function processInviteToken(uid, token, nickname){
 // ── REALTIME SYNC ──────────────────────────────────────────────
 function startRealtimeListeners(){
   if(!fbDb||!currentUser) return;
-  const {collection,query,orderBy,onSnapshot}=window._fbModules;
-  // Listen for notifications
-  const notifQ=query(collection(fbDb,'notifications'),orderBy('createdAt','desc'));
   if(notifUnsubscribe) notifUnsubscribe();
-  notifUnsubscribe=onSnapshot(notifQ, snap=>{
+  notifUnsubscribe=fbDb.collection('notifications').orderBy('createdAt','desc').onSnapshot(snap=>{
     const notifs=[];
     snap.forEach(d=>notifs.push({id:d.id,...d.data()}));
     updateNotifications(notifs);
   });
-  // Listen for places
-  const placesQ=query(collection(fbDb,'places'));
   if(placesUnsubscribe) placesUnsubscribe();
-  placesUnsubscribe=onSnapshot(placesQ, snap=>{
+  placesUnsubscribe=fbDb.collection('places').onSnapshot(snap=>{
     const cloudPlaces=[];
     snap.forEach(d=>cloudPlaces.push({...d.data(),id:d.id}));
-    if(cloudPlaces.length>0){
-      mergeCloudPlaces(cloudPlaces);
-    }
+    if(cloudPlaces.length>0) mergeCloudPlaces(cloudPlaces);
   });
 }
 
@@ -1757,13 +1733,12 @@ function markAllRead(){
 
 async function addNotification(type, text, placeId=''){
   if(!fbDb||!currentUser) return;
-  const {collection,addDoc,serverTimestamp}=window._fbModules;
   try{
-    await addDoc(collection(fbDb,'notifications'),{
+    await fbDb.collection('notifications').add({
       type, text, placeId,
       createdBy:currentUser.uid,
       createdByName:getNickname(),
-      createdAt:serverTimestamp(),
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
     });
   } catch(e){ console.error('Notification error:',e); }
 }
@@ -1783,11 +1758,10 @@ function formatRelativeTime(date){
 // ── CLOUD DATA SYNC ────────────────────────────────────────────
 async function syncPlaceToCloud(p){
   if(!fbDb||!currentUser) return;
-  const {doc,setDoc,serverTimestamp}=window._fbModules;
   try{
-    await setDoc(doc(fbDb,'places',p.id),{
-      ...p, photos:[],// photos stored separately in Storage
-      updatedAt:serverTimestamp(),
+    await fbDb.collection('places').doc(p.id).set({
+      ...p, photos:[],
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
       updatedBy:currentUser.uid,
     },{merge:true});
   } catch(e){ console.error('Sync error:',e); }
@@ -1813,28 +1787,32 @@ async function startMigration(){
   btn.disabled=true; btn.textContent='移行中...';
   const statusEl=document.getElementById('mig-status');
   const barEl=document.getElementById('mig-bar');
-  const {doc,setDoc,serverTimestamp,ref,uploadString,getStorage}=window._fbModules;
   let done=0; const total=places.length;
   for(const p of places){
     statusEl.innerHTML=`<span>📍 ${esc(p.name)} を移行中... (${done+1}/${total})</span>`;
     barEl.style.width=Math.round((done/total)*100)+'%';
     // Migrate place data
     try{
-      await setDoc(doc(fbDb,'places',p.id),{
+      await fbDb.collection('places').doc(p.id).set({
         ...p, photos:[],
-        migratedAt:serverTimestamp(),
+        migratedAt:firebase.firestore.FieldValue.serverTimestamp(),
         migratedBy:currentUser.uid,
       },{merge:true});
     }catch(e){ console.error('Place migration error:',p.name,e); }
-    // Migrate photos
+    // Migrate photos to Cloudinary
     try{
       const photos=await getPhotos(p.id);
       for(let i=0;i<photos.length;i++){
         const ph=photos[i];
-        const storage=fbStorage||getStorage(fbApp);
-        const photoRef=ref(storage,`photos/${p.id}/${ph.id}`);
-        await uploadString(photoRef,ph.blob,'data_url');
         statusEl.innerHTML=`<span>📷 ${esc(p.name)} 写真${i+1}/${photos.length}枚...</span>`;
+        const res=await fetch(ph.blob);
+        const blob=await res.blob();
+        const file=new File([blob], ph.name||'photo.jpg', {type:ph.type||'image/jpeg'});
+        const result=await uploadToCloudinary(file, p.id);
+        await fbDb.collection('media').add({...result,
+          uploadedBy:currentUser.uid,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
       }
     }catch(e){ console.error('Photo migration error:',p.name,e); }
     done++;
@@ -1863,6 +1841,28 @@ function save(){
   localStorage.setItem('pb_places',JSON.stringify(places));
   localStorage.setItem('pb_tagcolors',JSON.stringify(tagColorMap));
   localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
+}
+
+
+// ── CLOUDINARY MEDIA ──────────────────────────────────────────
+async function uploadToCloudinary(file, placeId){
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_PRESET);
+  formData.append('folder', `cafelist/${placeId}`);
+  const res = await fetch(CLOUDINARY_UPLOAD_URL, {method:'POST', body:formData});
+  if(!res.ok) throw new Error('Cloudinary upload failed: ' + res.status);
+  const data = await res.json();
+  return {
+    publicId: data.public_id,
+    url: data.secure_url,
+    resourceType: data.resource_type,
+    thumbnailUrl: data.resource_type === 'video'
+      ? data.secure_url.replace('/upload/', '/upload/so_0,w_300,h_300,c_fill/')
+      : data.secure_url.replace('/upload/', '/upload/w_300,h_300,c_fill/'),
+    addedAt: Date.now(),
+    placeId
+  };
 }
 
 // ── INDEXEDDB ──────────────────────────────────────────────────
@@ -2581,12 +2581,12 @@ async function openDetail(id){
         <div style="display:flex;gap:6px">
           <div class="photo-btn-wrap">
             <button class="photo-add-btn" style="font-size:18px;padding:6px 10px">📸</button>
-            <input type="file" accept="image/*,video/*" capture="environment"
+            <input type="file" accept="image/*" capture="environment"
               onchange="handlePhotoFile(event,'${id}')">
           </div>
           <div class="photo-btn-wrap">
             <button class="photo-add-btn">＋ ライブラリ</button>
-            <input type="file" accept="image/*,video/*" multiple
+            <input type="file" accept="image/*" multiple
               onchange="handlePhotoFile(event,'${id}')">
           </div>
         </div>
@@ -2690,149 +2690,6 @@ function saveMemo(id){
   }
 }
 
-
-// ── CLOUDINARY MEDIA ──────────────────────────────────────────
-async function uploadToCloudinary(file, placeId){
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', CLOUDINARY_PRESET);
-  formData.append('folder', `cafelist/${placeId}`);
-  // Add tags for easy retrieval
-  formData.append('tags', `place_${placeId}`);
-
-  const res = await fetch(CLOUDINARY_UPLOAD_URL, {method:'POST', body:formData});
-  if(!res.ok) throw new Error('Cloudinary upload failed: ' + res.status);
-  const data = await res.json();
-  return {
-    publicId: data.public_id,
-    url: data.secure_url,
-    resourceType: data.resource_type, // 'image' or 'video'
-    thumbnailUrl: data.resource_type === 'video'
-      ? data.secure_url.replace('/upload/', '/upload/so_0,w_300,h_300,c_fill/')
-      : data.secure_url.replace('/upload/', '/upload/w_300,h_300,c_fill/'),
-    width: data.width,
-    height: data.height,
-    duration: data.duration || null,
-    addedAt: Date.now(),
-    placeId
-  };
-}
-
-async function deleteFromCloudinary(publicId){
-  // Client-side delete requires signed request - skip for now
-  // Photos will remain in Cloudinary but removed from app
-  console.log('Cloudinary delete skipped (requires server):', publicId);
-}
-
-// Override savePhotos to use Cloudinary when logged in
-async function savePhotos(placeId, files){
-  if(currentUser && FB_CONFIGURED){
-    return savePhotosCloud(placeId, files);
-  }
-  return savePhotosLocal(placeId, files);
-}
-
-async function savePhotosCloud(placeId, files){
-  const {collection, addDoc, serverTimestamp} = window._fbModules;
-  const fileArr = Array.from(files);
-  for(const file of fileArr){
-    try{
-      showToast('アップロード中... ' + file.name);
-      const result = await uploadToCloudinary(file, placeId);
-      // Save metadata to Firestore
-      await addDoc(collection(fbDb, 'media'), {
-        ...result,
-        uploadedBy: currentUser.uid,
-        uploadedByName: getNickname(),
-        createdAt: serverTimestamp()
-      });
-      // Notify
-      const p = places.find(x=>x.id===placeId);
-      if(p){
-        const type = result.resourceType === 'video' ? 'video' : 'photo';
-        const icon = type === 'video' ? '🎥' : '📷';
-        addNotification(type, getNickname()+'が「'+p.name+'」に'+icon+'を追加しました', placeId).catch(console.error);
-      }
-    } catch(e){
-      console.error('Cloud upload error:', e);
-      showToast('アップロード失敗: ' + (e.message||'エラー'));
-    }
-  }
-}
-
-// Keep local savePhotos as fallback
-async function savePhotosLocal(placeId, files){
-  return new Promise(async (res, rej)=>{
-    if(!db){ res(); return; }
-    const fileArr = Array.from(files);
-    const fileData = [];
-    try{
-      for(const f of fileArr){
-        const dataUrl = await new Promise((r,e)=>{
-          const reader = new FileReader();
-          reader.onload = ev => r(ev.target.result);
-          reader.onerror = ev => e(ev);
-          reader.readAsDataURL(f);
-        });
-        fileData.push({placeId, blob:dataUrl, name:f.name, type:f.type, addedAt:Date.now()});
-      }
-    } catch(err){ rej(err); return; }
-    const tx = db.transaction('photos','readwrite');
-    tx.oncomplete = () => res();
-    tx.onerror = e => rej(e);
-    tx.onabort = e => rej(e);
-    const store = tx.objectStore('photos');
-    fileData.forEach(d => store.add(d));
-  });
-}
-
-// Override getPhotos to get from Firestore when logged in
-async function getPhotos(placeId){
-  if(currentUser && fbDb){
-    return getPhotosCloud(placeId);
-  }
-  return getPhotosLocal(placeId);
-}
-
-async function getPhotosCloud(placeId){
-  const {collection, query, where, getDocs} = window._fbModules;
-  try{
-    const q = query(collection(fbDb,'media'), where('placeId','==',placeId));
-    const snap = await getDocs(q);
-    const results = [];
-    snap.forEach(d => results.push({id:d.id, ...d.data()}));
-    return results.sort((a,b) => (a.addedAt||0) - (b.addedAt||0));
-  } catch(e){
-    console.error('getPhotosCloud error:', e);
-    return [];
-  }
-}
-
-function getPhotosLocal(placeId){
-  return new Promise(res=>{
-    if(!db){res([]);return}
-    const tx = db.transaction('photos','readonly');
-    const req = tx.objectStore('photos').index('placeId').getAll(placeId);
-    req.onsuccess = e => res(e.target.result||[]);
-    req.onerror = () => res([]);
-  });
-}
-
-// Override deletePhoto
-async function deletePhoto(id){
-  if(currentUser && fbDb){
-    const {doc, deleteDoc} = window._fbModules;
-    try{ await deleteDoc(doc(fbDb,'media',id)); } catch(e){ console.error(e); }
-    return;
-  }
-  return new Promise(res=>{
-    if(!db){res();return}
-    const tx = db.transaction('photos','readwrite');
-    tx.objectStore('photos').delete(id);
-    tx.oncomplete = res;
-  });
-}
-
 // ── PHOTOS ────────────────────────────────────────────────────
 async function handlePhotoFile(e, placeId){
   const files=e.target.files;
@@ -2862,31 +2719,11 @@ async function handleDeletePhoto(photoId, placeId){
 function initPhotoInputs(){
   // No-op: inputs are generated inline in openDetail
 }
-function openLightbox(src, isVideo=false){
-  const lb=document.getElementById('lightbox');
-  const img=document.getElementById('lb-img');
-  // Remove existing video if any
-  const oldVid=lb.querySelector('video');
-  if(oldVid) oldVid.remove();
-  if(isVideo){
-    img.style.display='none';
-    const vid=document.createElement('video');
-    vid.src=src; vid.controls=true; vid.autoplay=true;
-    vid.style.cssText='max-width:100%;max-height:80vh;border-radius:8px';
-    lb.insertBefore(vid, document.getElementById('lb-close'));
-  } else {
-    img.style.display='';
-    img.src=src;
-  }
-  lb.classList.add('show');
+function openLightbox(src){
+  document.getElementById('lb-img').src=src;
+  document.getElementById('lightbox').classList.add('show');
 }
-function closeLightbox(){
-  const lb=document.getElementById('lightbox');
-  lb.classList.remove('show');
-  const vid=lb.querySelector('video');
-  if(vid){ vid.pause(); vid.remove(); }
-  document.getElementById('lb-img').style.display='';
-}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('show')}
 
 // ── TAG MODAL ──────────────────────────────────────────────────
 function openTagModal(id){
