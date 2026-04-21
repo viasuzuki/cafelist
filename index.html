@@ -135,7 +135,7 @@ body{
 }
 #filter-toprow{
   display:flex;align-items:center;gap:8px;
-  padding:10px 14px;
+  padding:calc(var(--safe-top) + 10px) 14px 10px;
 }
 .filter-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 #filter-toggle-btn{
@@ -468,7 +468,7 @@ body{
 
 #cal-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
+  padding:calc(var(--safe-top) + 14px) 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
 }
 .cal-nav{
   width:40px;height:40px;border-radius:10px;
