@@ -739,6 +739,11 @@ body{
 .tv-tag-mark{font-size:18px}
 .tv-tag-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;flex:1}
 .tv-tag-count{font-size:11px;color:var(--muted)}
+.tv-tag-delete{
+  background:transparent;border:1px solid var(--border);border-radius:7px;
+  color:var(--muted);font-size:13px;padding:4px 9px;cursor:pointer;flex-shrink:0;
+}
+.tv-tag-delete:active{border-color:var(--danger);color:var(--danger)}
 .tv-place-row{
   display:flex;align-items:center;gap:10px;
   padding:9px 12px 9px 28px;border-radius:8px;
@@ -3141,6 +3146,7 @@ function renderTagView(){
         ${renderMarkBadge(tag,28)}
         <span class="tv-tag-name" style="color:${color}">${esc(tag)}</span>
         <span class="tv-tag-count">${tagged.length}件</span>
+        <button class="tv-tag-delete" onclick="deleteTag('${esc(tag)}')">🗑</button>
       </div>
       ${tagged.length?tagged.map(p=>`
         <div class="tv-place-row" onclick="tvGoToPlace('${p.id}')">
@@ -3151,6 +3157,21 @@ function renderTagView(){
       :'<div style="padding:6px 12px 6px 28px;font-size:11px;color:var(--muted)">紐付けられた店舗なし</div>'}
     </div>`;
   }).join('');
+}
+
+function deleteTag(tag){
+  if(!confirm(`「${tag}」を削除しますか？\n全ての店舗からこのタグが外されます。`)) return;
+  // 全店舗からタグを除去
+  places.forEach(p=>{p.tags=p.tags.filter(t=>t!==tag)});
+  // tagColorMap・tagMarkMapから削除
+  delete tagColorMap[tag];
+  delete tagMarkMap[tag];
+  save();
+  // マーカー更新
+  if(gmap) places.forEach(p=>{if(p.lat)addMarker(p)});
+  renderAll();
+  renderTagView();
+  showToast(`「${tag}」を削除しました`);
 }
 
 function tvGoToPlace(id){
