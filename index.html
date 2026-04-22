@@ -1765,23 +1765,36 @@ function startRealtimeListeners(){
     localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
     renderAll();
     if(currentTab==='tag') renderTagView();
+    // マーカーの色を再描画
+    if(gmap) places.forEach(p=>{if(p.lat)addMarker(p)});
     showToast('タグ設定が更新されました');
   });
 }
 
 function mergeCloudPlaces(cloudPlaces){
-  // Add cloud places not already in local
   let changed=false;
   cloudPlaces.forEach(cp=>{
-    const exists=places.find(p=>p.id===cp.id);
-    if(!exists){
+    const idx=places.findIndex(p=>p.id===cp.id);
+    if(idx===-1){
+      // 新規追加
       places.unshift(cp);
       changed=true;
+    } else {
+      // 既存の更新（タグ・メモ等をクラウドで上書き）
+      const local=places[idx];
+      const cloudUpdated=(cp.updatedAt?.seconds||0);
+      const localUpdated=(local.updatedAt?.seconds||0);
+      if(cloudUpdated>localUpdated){
+        places[idx]={...local,...cp};
+        changed=true;
+      }
     }
   });
   if(changed){
     save(); renderAll();
-    if(gmap) places.forEach(p=>{ if(p.lat&&!markers[p.id]) addMarker(p); });
+    if(gmap) places.forEach(p=>{
+      if(p.lat) addMarker(p); // 色も含めて再描画
+    });
   }
 }
 
@@ -1887,6 +1900,8 @@ function formatRelativeTime(date){
 async function syncPlaceToCloud(p){
   if(!fbDb||!currentUser) return;
   try{
+    const now=Date.now();
+    p.updatedAt={seconds:Math.floor(now/1000)}; // ローカルにも記録
     await fbDb.collection('places').doc(p.id).set({
       ...p, photos:[],
       updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
