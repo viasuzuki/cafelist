@@ -1461,18 +1461,40 @@ async function initFirebase(){
 async function handleAuthChange(user){
   currentUser=user;
   if(user){
-    // Logged in
     document.getElementById('auth-screen').classList.add('hidden');
     updateUserBar(user);
     await loadUserProfile(user.uid);
+    await loadAllCloudPlaces();
     startRealtimeListeners();
     updateSettingsPage();
   } else {
-    // Logged out - show auth screen only if Firebase is configured
-    if(FB_CONFIGURED){
-      document.getElementById('auth-screen').classList.remove('hidden');
-    }
+    const nameEl=document.getElementById('user-name-display');
+    const emailEl=document.getElementById('user-email-display');
+    if(nameEl) nameEl.textContent='未ログイン';
+    if(emailEl) emailEl.textContent='';
   }
+}
+
+async function loadAllCloudPlaces(){
+  if(!fbDb) return;
+  try{
+    const snap=await fbDb.collection('places').get();
+    const cloudPlaces=[];
+    snap.forEach(d=>cloudPlaces.push({...d.data(),id:d.id}));
+    if(!cloudPlaces.length) return;
+    let added=0;
+    cloudPlaces.forEach(cp=>{
+      if(!places.find(p=>p.id===cp.id)){
+        places.push(cp);
+        added++;
+      }
+    });
+    if(added>0){
+      save();renderAll();
+      showToast(`${added}件のデータを同期しました`);
+      if(gmap) places.forEach(p=>{if(p.lat&&!markers[p.id])addMarker(p)});
+    }
+  } catch(e){ console.error('Cloud load error:',e); }
 }
 
 // ── AUTH ───────────────────────────────────────────────────────
@@ -2529,6 +2551,12 @@ function pushPlace(p){
   if(gmap&&p.lat)addMarker(p);
   flyTo(p);openDetail(p.id);
   switchTab('map');
+  // Firebaseにも保存
+  if(fbDb&&currentUser){
+    syncPlaceToCloud(p).catch(console.error);
+    const name=getNickname();
+    addNotification('add',`${name}が「${p.name}」を追加しました`,p.id).catch(console.error);
+  }
 }
 
 function closeDropdown(){
