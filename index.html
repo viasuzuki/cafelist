@@ -301,6 +301,22 @@ body{
   flex:1;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+.page-title-row{
+  flex:1;display:flex;align-items:center;gap:10px;min-width:0;
+}
+.page-title-txt{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+  flex-shrink:0;
+}
+#filter-toggle-btn{
+  font-family:'DM Mono',monospace;font-size:11px;
+  background:transparent;border:1px solid var(--border);
+  border-radius:20px;padding:6px 14px;color:var(--muted);cursor:pointer;
+  white-space:nowrap;transition:all .15s;
+  min-height:32px;
+}
+#filter-toggle-btn:active{opacity:.7}
+#filter-toggle-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .header-action-btn{
   width:36px;height:36px;border-radius:9px;
   background:var(--surface2);border:1px solid var(--border);
@@ -462,6 +478,7 @@ body{
 .pcard.active{border-color:var(--accent);background:var(--accent-dim)}
 .pc-row1{display:flex;gap:9px;align-items:flex-start}
 .pc-dot{font-size:13px;line-height:1;margin-top:2px;flex-shrink:0}
+.pc-dot-wrap{flex-shrink:0;margin-top:2px;display:flex;align-items:center}
 .pc-body{flex:1;min-width:0}
 .pc-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
   line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -472,6 +489,7 @@ body{
 .stars{color:#f5c242}
 .pc-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
 .ptag{font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid;opacity:.9}
+.ptag-emoji{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:500}
 .pc-note{font-size:11px;color:var(--muted);margin-top:5px;
   font-style:italic;line-height:1.4;
   overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -1007,7 +1025,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <div id="map-view">
     <div id="gmap"></div>
     <div class="map-hint" id="map-hint">🔑 APIキーを設定すると地図が有効になります</div>
-    <button id="map-filter-btn" onclick="toggleMapFilter()" title="タグで地図を絞込み">🔍</button>
+    <button id="map-filter-btn" onclick="openListWithFilter()" title="タグで絞り込む">🔍</button>
     <button id="map-poi-btn" onclick="toggleMapPoi()" title="POIアイコン表示切替">
       <!-- Eye open (default: POI visible) -->
       <svg id="eye-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1027,8 +1045,10 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
   <div id="list-view">
     <div class="page-header">
       <button class="back-btn" onclick="switchTab('map')">◀</button>
-      <div class="page-title">📋 リスト</div>
-      <button class="header-action-btn" id="filter-toggle-btn" onclick="toggleFilterPanel()">🔍</button>
+      <div class="page-title-row">
+        <span class="page-title-txt">📋 リスト</span>
+        <button id="filter-toggle-btn" onclick="toggleFilterPanel()">🔍 絞込み</button>
+      </div>
     </div>
     <div id="filter-bar">
       <div id="filter-panel">
@@ -1360,7 +1380,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 
 <script>
 const TAG_COLORS=['#b8f542','#42d4f5','#f5a142','#f54269','#a042f5','#42f5b8','#f5e642','#ff7f50'];
-const MARK_OPTIONS=['★','♥','◆','●','▲','☀','♪','✿','⚑','✈','☕','🍜'];
+const MARK_OPTIONS=['☕','🍜','🍽️','🥐','🍎','🍺','🎡','🏨','♨️','★','♥','◆','●','▲','☀','♪','✿','⚑','✈'];
 let places=JSON.parse(localStorage.getItem('pb_places')||'[]');
 let tagColorMap=JSON.parse(localStorage.getItem('pb_tagcolors')||'{}');
 let tagMarkMap=JSON.parse(localStorage.getItem('pb_tagmarks')||'{}');
@@ -2188,11 +2208,30 @@ function addMarker(p){
   if(!gmap) return;
   if(markers[p.id]) markers[p.id].setMap(null);
   const color=getPlaceColor(p);
-  const m=new google.maps.Marker({
-    position:{lat:p.lat,lng:p.lng},map:gmap,title:p.name,
-    icon:{path:'M 0,-12 3,-4 12,-4 5,2 8,10 0,5 -8,10 -5,2 -12,-4 -3,-4 Z',scale:1,
-      fillColor:color,fillOpacity:1,strokeColor:'#0d0d10',strokeWeight:1.5}
-  });
+  const firstTag=p.tags.length?p.tags[0]:null;
+  const mk=firstTag?tagMark(firstTag):null;
+  const useEmoji=mk && isEmojiMark(mk);
+  const markerOpts={
+    position:{lat:p.lat,lng:p.lng}, map:gmap, title:p.name
+  };
+  if(useEmoji){
+    // Rounded square background with emoji label
+    markerOpts.icon={
+      path:'M -11,-11 L 11,-11 Q 14,-11 14,-8 L 14,8 Q 14,11 11,11 L -11,11 Q -14,11 -14,8 L -14,-8 Q -14,-11 -11,-11 Z',
+      scale:1, fillColor:color, fillOpacity:1,
+      strokeColor:'#0d0d10', strokeWeight:1.5,
+      labelOrigin:new google.maps.Point(0,0)
+    };
+    markerOpts.label={
+      text:mk, fontSize:'16px', color:'#000'
+    };
+  } else {
+    markerOpts.icon={
+      path:'M 0,-12 3,-4 12,-4 5,2 8,10 0,5 -8,10 -5,2 -12,-4 -3,-4 Z', scale:1,
+      fillColor:color, fillOpacity:1, strokeColor:'#0d0d10', strokeWeight:1.5
+    };
+  }
+  const m=new google.maps.Marker(markerOpts);
   m.addListener('click',()=>{
     highlightCard(p.id);
     openDetail(p.id);
@@ -2327,9 +2366,8 @@ function renderSsTagList(){
   }
   list.innerHTML=allTags.map(t=>{
     const checked=ssSelectedTags.has(t);
-    const color=tagColor(t);
     return `<div class="ss-tag-row${checked?' checked':''}" onclick="ssToggleTag('${esc(t)}')">
-      <div class="ss-tag-dot" style="background:${color}"></div>
+      ${renderMarkBadge(t,22)}
       <div class="ss-tag-name">${esc(t)}</div>
       <div class="ss-check">${checked?'✓':''}</div>
     </div>`;
@@ -2430,11 +2468,9 @@ function renderFilterChips(){
   const container=document.getElementById('filter-tag-checks');
   if(!container) return;
   container.innerHTML=allTags.map(tag=>{
-    const color=tagColor(tag);
-    const mark=tagMark(tag);
     const checked=activeFilters.has(tag);
     return `<div class="ftag-row${checked?' checked':''}" onclick="toggleFilterTag('${esc(tag)}')">
-      <span class="ftag-mark" style="color:${color}">${mark}</span>
+      ${renderMarkBadge(tag,22)}
       <span class="ftag-name">${esc(tag)}</span>
       <div class="ftag-check">${checked?'✓':''}</div>
     </div>`;
@@ -2521,6 +2557,15 @@ function toggleMapFilter(){
   }
 }
 
+function openListWithFilter(){
+  switchTab('list');
+  // Open filter panel after transition
+  setTimeout(()=>{
+    const panel=document.getElementById('filter-panel');
+    if(panel) panel.classList.add('open');
+  }, 350);
+}
+
 // Legacy setFilter kept for compatibility
 function setFilter(tag){}
 
@@ -2539,7 +2584,7 @@ function renderList(){
   list.innerHTML=vis.map(p=>`
     <div class="pcard${p.id===activeCardId?' active':''}" id="card_${p.id}" onclick="cardClick('${p.id}')">
       <div class="pc-row1">
-        <span class="pc-dot" style="color:${getPlaceColor(p)}">${p.tags.length?tagMark(p.tags[0]):'★'}</span>
+        <span class="pc-dot-wrap">${p.tags.length?renderMarkBadge(p.tags[0],24):'<span style="color:#f5c242;font-size:16px">★</span>'}</span>
         <div class="pc-body">
           <div class="pc-name">${esc(p.name)}</div>
           <div class="pc-cat">${esc(fmtTypes(p.types))}</div>
@@ -2547,7 +2592,14 @@ function renderList(){
           ${p.rating?`<div class="pc-rating"><span class="stars">★</span>${p.rating}<span style="color:var(--muted)">&nbsp;(${p.reviewCount||0})</span></div>`:''}
         </div>
       </div>
-      ${p.tags.length?`<div class="pc-tags">${p.tags.map(t=>`<div class="ptag" style="border-color:${tagColor(t)};color:${tagColor(t)}">${tagMark(t)} ${esc(t)}</div>`).join('')}</div>`:''}
+      ${p.tags.length?`<div class="pc-tags">${p.tags.map(t=>{
+        const mk=tagMark(t);
+        const color=tagColor(t);
+        if(isEmojiMark(mk)){
+          return `<div class="ptag-emoji" style="background:${color};color:#000">${mk} ${esc(t)}</div>`;
+        }
+        return `<div class="ptag" style="border-color:${color};color:${color}">${mk} ${esc(t)}</div>`;
+      }).join('')}</div>`:''}
       ${p.note?`<div class="pc-note">${esc(p.note)}</div>`:''}
       <div class="pc-actions">
         <button class="abtn" onclick="event.stopPropagation();openTagModal('${p.id}')">🏷 タグ</button>
@@ -2596,7 +2648,14 @@ async function openDetail(id){
     ${p.website?`<div class="dp-row"><div class="dp-icon">🌐</div><div class="dp-val"><a href="${esc(p.website)}" target="_blank">${esc(shortUrl(p.website))}</a></div></div>`:''}
     ${p.googleUrl?`<div class="dp-row"><div class="dp-icon">🗺</div><div class="dp-val"><a href="${esc(p.googleUrl)}" target="_blank">Google Mapsで見る</a></div></div>`:''}
     ${p.hours?`<div class="dp-row"><div class="dp-icon">🕐</div><div class="dp-val"><span class="dp-label">営業時間</span><div class="hours-list">${p.hours.map((h,i)=>`<div class="${i===todayDow?'hour-today':''}">${esc(h)}</div>`).join('')}</div></div></div>`:''}
-    ${p.tags.length?`<div class="dp-row"><div class="dp-icon">🏷</div><div class="dp-val">${p.tags.map(t=>`<span style="color:${tagColor(t)};margin-right:8px">#${esc(t)}</span>`).join('')}</div></div>`:''}
+    ${p.tags.length?`<div class="dp-row"><div class="dp-icon">🏷</div><div class="dp-val" style="display:flex;flex-wrap:wrap;gap:6px">${p.tags.map(t=>{
+      const mk=tagMark(t);
+      const color=tagColor(t);
+      if(isEmojiMark(mk)){
+        return `<span style="background:${color};color:#000;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500">${mk} ${esc(t)}</span>`;
+      }
+      return `<span style="border:1px solid ${color};color:${color};padding:3px 10px;border-radius:20px;font-size:11px">${mk} ${esc(t)}</span>`;
+    }).join('')}</div></div>`:''}
 
     ${p.photos&&p.photos.length>1?`
     <div class="dp-section">
@@ -2776,22 +2835,41 @@ function openTagModal(id){
 function closeTagModal(){document.getElementById('tag-modal').classList.remove('show')}
 function renderTagModal(p){
   document.getElementById('tc-current').innerHTML=
-    p.tags.map(t=>`<div class="tc-chip" style="border-color:${tagColor(t)};color:${tagColor(t)}" onclick="removeTag('${esc(t)}')">
-      <span>${tagMark(t)}</span>${esc(t)}<span class="tc-rm">✕</span></div>`).join('')
+    p.tags.map(t=>{
+      const mk=tagMark(t);
+      const color=tagColor(t);
+      if(isEmojiMark(mk)){
+        return `<div class="tc-chip" style="background:${color};color:#000;border-color:${color}" onclick="removeTag('${esc(t)}')">
+          <span>${mk}</span>${esc(t)}<span class="tc-rm" style="color:#000">✕</span></div>`;
+      }
+      return `<div class="tc-chip" style="border-color:${color};color:${color}" onclick="removeTag('${esc(t)}')">
+        <span>${mk}</span>${esc(t)}<span class="tc-rm">✕</span></div>`;
+    }).join('')
     ||'<span style="color:var(--muted);font-size:11px">タグなし</span>';
   buildMarkRow();
   buildColorRow();
 }
 function buildMarkRow(){
   const mr=document.getElementById('mark-row');if(!mr)return;
-  mr.innerHTML=MARK_OPTIONS.map(mk=>`
-    <div onclick="pickMark('${mk}')"
-      style="width:36px;height:36px;border-radius:8px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;font-size:18px;
-      background:${mk===selectedMark?'var(--surface3)':'var(--surface2)'};
-      border:2px solid ${mk===selectedMark?'var(--accent)':'var(--border)'}">
-      ${mk}
-    </div>`).join('');
+  mr.innerHTML=MARK_OPTIONS.map(mk=>{
+    const isSelected=mk===selectedMark;
+    const isEmoji=isEmojiMark(mk);
+    const innerStyle=isEmoji
+      ? `background:${selectedColor};color:#000;`
+      : `color:${selectedColor};`;
+    return `<div onclick="pickMark('${mk}')"
+      style="width:40px;height:40px;border-radius:10px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      background:var(--surface2);
+      border:2px solid ${isSelected?'var(--accent)':'var(--border)'};
+      padding:3px">
+      <div style="width:100%;height:100%;border-radius:7px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:${isEmoji?'16px':'18px'};${innerStyle}">
+        ${mk}
+      </div>
+    </div>`;
+  }).join('');
 }
 function pickMark(mk){selectedMark=mk;buildMarkRow()}
 function buildColorRow(){
@@ -2826,6 +2904,26 @@ function removeTag(tag){
   if(gmap&&markers[p.id]) addMarker(p);
 }
 function tagMark(tag){return tagMarkMap[tag]||'★'}
+// True if the mark is an emoji (should get rounded background)
+function isEmojiMark(mk){
+  if(!mk) return false;
+  // These are all the emoji in MARK_OPTIONS
+  const emojiSet=['☕','🍜','🍽️','🥐','🍎','🍺','🎡','🏨','♨️'];
+  return emojiSet.includes(mk);
+}
+// Render a tag mark badge (emoji gets rounded color background, symbol gets colored text)
+function renderMarkBadge(tag, size=22){
+  const mk=tagMark(tag);
+  const color=tagColor(tag);
+  if(isEmojiMark(mk)){
+    const fs=Math.round(size*0.6);
+    const radius=Math.round(size*0.25);
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;
+      width:${size}px;height:${size}px;border-radius:${radius}px;
+      background:${color};font-size:${fs}px;line-height:1;flex-shrink:0">${mk}</span>`;
+  }
+  return `<span style="color:${color};font-size:${Math.round(size*0.8)}px;line-height:1;flex-shrink:0">${mk}</span>`;
+}
 
 // ── TAG VIEW ──────────────────────────────────────────────────
 function renderTagView(){
@@ -2837,18 +2935,17 @@ function renderTagView(){
   }
   list.innerHTML=allTags.map(tag=>{
     const color=tagColor(tag);
-    const mark=tagMark(tag);
     const tagged=places.filter(p=>p.tags.includes(tag));
     return `
     <div class="tv-tag-section">
       <div class="tv-tag-header">
-        <span class="tv-tag-mark" style="color:${color}">${mark}</span>
+        ${renderMarkBadge(tag,28)}
         <span class="tv-tag-name" style="color:${color}">${esc(tag)}</span>
         <span class="tv-tag-count">${tagged.length}件</span>
       </div>
       ${tagged.length?tagged.map(p=>`
         <div class="tv-place-row" onclick="tvGoToPlace('${p.id}')">
-          <span style="color:${color};font-size:12px">${mark}</span>
+          ${renderMarkBadge(tag,18)}
           <span class="tv-place-name">${esc(p.name)}</span>
           <button class="tv-remove" onclick="event.stopPropagation();tvRemoveTag('${p.id}','${esc(tag)}')">外す</button>
         </div>`).join('')
@@ -2891,14 +2988,25 @@ function closeCreateTagSheet(){
   document.getElementById('create-tag-modal').classList.remove('show');
 }
 function buildCtMarkRow(){
-  document.getElementById('ct-mark-row').innerHTML=MARK_OPTIONS.map(mk=>`
-    <div onclick="pickCtMark('${mk}')"
-      style="width:36px;height:36px;border-radius:8px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;font-size:18px;
-      background:${mk===ctSelectedMark?'var(--surface3)':'var(--surface2)'};
-      border:2px solid ${mk===ctSelectedMark?'var(--accent)':'var(--border)'}">
-      ${mk}
-    </div>`).join('');
+  document.getElementById('ct-mark-row').innerHTML=MARK_OPTIONS.map(mk=>{
+    const isSelected=mk===ctSelectedMark;
+    const isEmoji=isEmojiMark(mk);
+    const innerStyle=isEmoji
+      ? `background:${ctSelectedColor};color:#000;`
+      : `color:${ctSelectedColor};`;
+    return `<div onclick="pickCtMark('${mk}')"
+      style="width:40px;height:40px;border-radius:10px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      background:var(--surface2);
+      border:2px solid ${isSelected?'var(--accent)':'var(--border)'};
+      padding:3px">
+      <div style="width:100%;height:100%;border-radius:7px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:${isEmoji?'16px':'18px'};${innerStyle}">
+        ${mk}
+      </div>
+    </div>`;
+  }).join('');
 }
 function buildCtColorRow(){
   document.getElementById('ct-color-row').innerHTML=TAG_COLORS.map(c=>`
@@ -3001,7 +3109,10 @@ function renderCalendar(){
     if(c.month!=='cur') return `<div class="cal-day other-month"><div class="cal-day-num">${c.day}</div></div>`;
     const isToday=c.dateStr===todayStr;
     const hasLinks=c.linked.length>0;
-    const dots=c.linked.slice(0,4).map(p=>`<span class="cal-dot" style="color:${getPlaceColor(p)}">${p.tags.length?tagMark(p.tags[0]):'★'}</span>`).join('');
+    const dots=c.linked.slice(0,4).map(p=>{
+      if(!p.tags.length) return `<span class="cal-dot" style="color:#f5c242">★</span>`;
+      return renderMarkBadge(p.tags[0], 14);
+    }).join('');
     const cls=['cal-day',isToday?'today':'',hasLinks?'has-places':''].filter(Boolean).join(' ');
     return `<div class="${cls}" onclick="openCalDaySheet('${c.dateStr}')">
       <div class="cal-day-num">${c.day}</div>
@@ -3041,7 +3152,7 @@ function renderCdsList(){
     if(!p) return '';
     return `<div class="cds-card" style="justify-content:space-between">
       <div onclick="calCardClick('${p.id}')" style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">
-        <span style="font-size:13px;line-height:1;color:${getPlaceColor(p)}">★</span>
+        ${p.tags.length?renderMarkBadge(p.tags[0],22):'<span style="color:#f5c242;font-size:14px">★</span>'}
         <div style="min-width:0">
           <div class="cds-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</div>
           <div class="cds-meta">${p.tags.map(t=>`<span style="color:${tagColor(t)}">#${esc(t)}</span>`).join(' ')}</div>
@@ -3078,7 +3189,7 @@ function openCalPicker(){
   document.getElementById('cps-list').innerHTML=places.map(p=>{
     const already=linked.has(p.id);
     return `<div class="cps-card${already?' style="opacity:.4;pointer-events:none"':''}" onclick="linkCalEntry('${p.id}')">
-      <span style="font-size:13px;line-height:1;color:${getPlaceColor(p)}">★</span>
+      ${p.tags.length?renderMarkBadge(p.tags[0],22):'<span style="color:#f5c242;font-size:14px">★</span>'}
       <div style="min-width:0;flex:1">
         <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</div>
