@@ -66,6 +66,14 @@ body{
   font-size:16px;cursor:pointer;flex-shrink:0;
 }
 #topbar-settings-btn:active{opacity:.7}
+#topbar-notif-btn{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;flex-shrink:0;
+  position:relative;
+}
+#topbar-notif-btn:active{opacity:.7}
 
 /* ── SEARCH DROPDOWN ── */
 #search-dropdown{
@@ -1013,6 +1021,13 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
     <input id="search-input" type="text" placeholder="店名・場所で検索..." autocomplete="off" autocorrect="off" spellcheck="false">
     <span class="s-icon">⌕</span>
   </div>
+  <div id="topbar-notif-btn" onclick="switchTab('notif')" title="通知">
+    🔔
+    <span id="topbar-notif-badge" style="display:none;position:absolute;top:2px;right:2px;
+      background:var(--danger);color:#fff;font-size:8px;font-weight:700;
+      width:14px;height:14px;border-radius:50%;
+      display:none;align-items:center;justify-content:center">0</span>
+  </div>
   <div id="topbar-settings-btn" onclick="switchTab('settings')" title="設定">⚙️</div>
 </div>
 
@@ -1261,10 +1276,6 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
     <div class="tab-icon">🏷</div>
     <div>タグ</div>
   </div>
-  <div class="tab" id="tab-notif" onclick="switchTab('notif')">
-    <div class="tab-icon">🔔</div>
-    <div>通知</div>
-  </div>
 </div>
 
 <!-- CAL DAY SHEET -->
@@ -1380,7 +1391,7 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 
 <script>
 const TAG_COLORS=['#b8f542','#42d4f5','#f5a142','#f54269','#a042f5','#42f5b8','#f5e642','#ff7f50'];
-const MARK_OPTIONS=['☕','🍜','🍽️','🥐','🍎','🍺','🎡','🏨','♨️','★','♥','◆','●','▲','☀','♪','✿','⚑','✈'];
+const MARK_OPTIONS=['★','♥','◆','●','▲','☀','♪','✿','⚑','✈','☕','🍜','🍽️','🥐','🍎','🍺','🎡','🏨','♨️'];
 let places=JSON.parse(localStorage.getItem('pb_places')||'[]');
 let tagColorMap=JSON.parse(localStorage.getItem('pb_tagcolors')||'{}');
 let tagMarkMap=JSON.parse(localStorage.getItem('pb_tagmarks')||'{}');
@@ -1713,18 +1724,13 @@ function updateNotifications(notifs){
 }
 
 function updateNotifBadge(){
-  const tabEl=document.getElementById('tab-notif');
-  if(!tabEl) return;
-  let badge=tabEl.querySelector('.tab-badge');
+  const badge=document.getElementById('topbar-notif-badge');
+  if(!badge) return;
   if(unreadCount>0){
-    if(!badge){
-      badge=document.createElement('div');
-      badge.className='tab-badge';
-      tabEl.appendChild(badge);
-    }
     badge.textContent=unreadCount>9?'9+':unreadCount;
+    badge.style.display='flex';
   } else {
-    if(badge) badge.remove();
+    badge.style.display='none';
   }
 }
 
@@ -2595,9 +2601,6 @@ function renderList(){
       ${p.tags.length?`<div class="pc-tags">${p.tags.map(t=>{
         const mk=tagMark(t);
         const color=tagColor(t);
-        if(isEmojiMark(mk)){
-          return `<div class="ptag-emoji" style="background:${color};color:#000">${mk} ${esc(t)}</div>`;
-        }
         return `<div class="ptag" style="border-color:${color};color:${color}">${mk} ${esc(t)}</div>`;
       }).join('')}</div>`:''}
       ${p.note?`<div class="pc-note">${esc(p.note)}</div>`:''}
@@ -2651,9 +2654,6 @@ async function openDetail(id){
     ${p.tags.length?`<div class="dp-row"><div class="dp-icon">🏷</div><div class="dp-val" style="display:flex;flex-wrap:wrap;gap:6px">${p.tags.map(t=>{
       const mk=tagMark(t);
       const color=tagColor(t);
-      if(isEmojiMark(mk)){
-        return `<span style="background:${color};color:#000;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500">${mk} ${esc(t)}</span>`;
-      }
       return `<span style="border:1px solid ${color};color:${color};padding:3px 10px;border-radius:20px;font-size:11px">${mk} ${esc(t)}</span>`;
     }).join('')}</div></div>`:''}
 
@@ -2838,10 +2838,6 @@ function renderTagModal(p){
     p.tags.map(t=>{
       const mk=tagMark(t);
       const color=tagColor(t);
-      if(isEmojiMark(mk)){
-        return `<div class="tc-chip" style="background:${color};color:#000;border-color:${color}" onclick="removeTag('${esc(t)}')">
-          <span>${mk}</span>${esc(t)}<span class="tc-rm" style="color:#000">✕</span></div>`;
-      }
       return `<div class="tc-chip" style="border-color:${color};color:${color}" onclick="removeTag('${esc(t)}')">
         <span>${mk}</span>${esc(t)}<span class="tc-rm">✕</span></div>`;
     }).join('')
@@ -2854,9 +2850,7 @@ function buildMarkRow(){
   mr.innerHTML=MARK_OPTIONS.map(mk=>{
     const isSelected=mk===selectedMark;
     const isEmoji=isEmojiMark(mk);
-    const innerStyle=isEmoji
-      ? `background:${selectedColor};color:#000;`
-      : `color:${selectedColor};`;
+    const innerStyle=`color:${selectedColor};`;
     return `<div onclick="pickMark('${mk}')"
       style="width:40px;height:40px;border-radius:10px;cursor:pointer;
       display:flex;align-items:center;justify-content:center;
@@ -2915,14 +2909,8 @@ function isEmojiMark(mk){
 function renderMarkBadge(tag, size=22){
   const mk=tagMark(tag);
   const color=tagColor(tag);
-  if(isEmojiMark(mk)){
-    const fs=Math.round(size*0.6);
-    const radius=Math.round(size*0.25);
-    return `<span style="display:inline-flex;align-items:center;justify-content:center;
-      width:${size}px;height:${size}px;border-radius:${radius}px;
-      background:${color};font-size:${fs}px;line-height:1;flex-shrink:0">${mk}</span>`;
-  }
-  return `<span style="color:${color};font-size:${Math.round(size*0.8)}px;line-height:1;flex-shrink:0">${mk}</span>`;
+  const fs=isEmojiMark(mk)?Math.round(size*0.85):Math.round(size*0.8);
+  return `<span style="color:${color};font-size:${fs}px;line-height:1;flex-shrink:0">${mk}</span>`;
 }
 
 // ── TAG VIEW ──────────────────────────────────────────────────
@@ -2991,9 +2979,7 @@ function buildCtMarkRow(){
   document.getElementById('ct-mark-row').innerHTML=MARK_OPTIONS.map(mk=>{
     const isSelected=mk===ctSelectedMark;
     const isEmoji=isEmojiMark(mk);
-    const innerStyle=isEmoji
-      ? `background:${ctSelectedColor};color:#000;`
-      : `color:${ctSelectedColor};`;
+    const innerStyle=`color:${ctSelectedColor};`;
     return `<div onclick="pickCtMark('${mk}')"
       style="width:40px;height:40px;border-radius:10px;cursor:pointer;
       display:flex;align-items:center;justify-content:center;
