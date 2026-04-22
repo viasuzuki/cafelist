@@ -1478,6 +1478,16 @@ async function handleAuthChange(user){
 async function loadAllCloudPlaces(){
   if(!fbDb) return;
   try{
+    // タグ設定を取得
+    const tagSnap=await fbDb.collection('shared').doc('tagSettings').get();
+    if(tagSnap.exists){
+      const data=tagSnap.data();
+      if(data.tagColorMap) tagColorMap=Object.assign({},data.tagColorMap,tagColorMap);
+      if(data.tagMarkMap)  tagMarkMap=Object.assign({},data.tagMarkMap,tagMarkMap);
+      localStorage.setItem('pb_tagcolors',JSON.stringify(tagColorMap));
+      localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
+    }
+    // 場所データを取得
     const snap=await fbDb.collection('places').get();
     const cloudPlaces=[];
     snap.forEach(d=>cloudPlaces.push({...d.data(),id:d.id}));
@@ -1726,6 +1736,17 @@ function startRealtimeListeners(){
     snap.forEach(d=>cloudPlaces.push({...d.data(),id:d.id}));
     if(cloudPlaces.length>0) mergeCloudPlaces(cloudPlaces);
   });
+  // タグ設定のリアルタイム同期
+  fbDb.collection('shared').doc('tagSettings').onSnapshot(snap=>{
+    if(!snap.exists) return;
+    const data=snap.data();
+    if(data.updatedBy===currentUser.uid) return; // 自分の更新は無視
+    if(data.tagColorMap) tagColorMap=Object.assign({},data.tagColorMap,tagColorMap);
+    if(data.tagMarkMap)  tagMarkMap=Object.assign({},data.tagMarkMap,tagMarkMap);
+    localStorage.setItem('pb_tagcolors',JSON.stringify(tagColorMap));
+    localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
+    renderAll();
+  });
 }
 
 function mergeCloudPlaces(cloudPlaces){
@@ -1928,6 +1949,14 @@ function save(){
   localStorage.setItem('pb_places',JSON.stringify(places));
   localStorage.setItem('pb_tagcolors',JSON.stringify(tagColorMap));
   localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
+  // Firestoreにもタグ設定を同期
+  if(fbDb&&currentUser){
+    fbDb.collection('shared').doc('tagSettings').set({
+      tagColorMap, tagMarkMap,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:currentUser.uid
+    }).catch(e=>console.error('Tag sync error:',e));
+  }
 }
 
 
@@ -2774,11 +2803,26 @@ async function _renderDetailContent(p, isPreview){
   const id=p.id||'preview';
 
   const localPhotos=isPreview?[]:await getPhotos(id);
-  const localPhotoHTML=localPhotos.length
-    ?localPhotos.map(ph=>`
+  // Cloudinaryの写真も取得（ログイン中）
+  let cloudPhotos=[];
+  if(!isPreview&&fbDb&&currentUser){
+    try{
+      const snap=await fbDb.collection('media').where('placeId','==',id).get();
+      snap.forEach(d=>cloudPhotos.push({id:d.id,...d.data()}));
+    } catch(e){ console.error('Cloud photo load error:',e); }
+  }
+  // 重複除去（ローカルにあるものはローカル優先）
+  const allPhotos=[
+    ...localPhotos.map(ph=>({src:ph.blob,id:ph.id,isLocal:true})),
+    ...cloudPhotos
+      .filter(cp=>!localPhotos.some(lp=>lp.blob===cp.url))
+      .map(cp=>({src:cp.url,id:cp.id,isLocal:false}))
+  ];
+  const localPhotoHTML=allPhotos.length
+    ?allPhotos.map(ph=>`
       <div class="photo-thumb">
-        <img src="${ph.blob}" onclick="openLightbox('${ph.blob}')">
-        <button class="photo-del" onclick="event.stopPropagation();handleDeletePhoto(${ph.id},'${id}')">✕</button>
+        <img src="${ph.src}" onclick="openLightbox('${ph.src}')" onerror="this.style.display='none'">
+        <button class="photo-del" onclick="event.stopPropagation();handleDeletePhoto(${JSON.stringify(ph.id)},'${id}',${ph.isLocal})">✕</button>
       </div>`).join('')
     :`<div class="photo-empty">写真なし${isPreview?'':'<br><span style="font-size:10px">＋追加ボタンから選択</span>'}</div>`;
 
@@ -2929,12 +2973,27 @@ async function handlePhotoFile(e, placeId){
   const files=e.target.files;
   if(!files||!files.length||!placeId) return;
   try{
-    // Always save locally so photos appear in IndexedDB
-    await savePhotos(placeId, files);
+    if(fbDb&&currentUser){
+      // ログイン中はCloudinaryにアップロード→Firestoreにメタデータ保存
+      showToast('アップロード中...', 5000);
+      for(const file of Array.from(files)){
+        const result=await uploadToCloudinary(file, placeId);
+        await fbDb.collection('media').add({
+          ...result,
+          uploadedBy:currentUser.uid,
+          uploadedByName:getNickname(),
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      // ローカルにも保存（オフライン用）
+      await savePhotos(placeId, files);
+    } else {
+      // 未ログイン時はローカルのみ
+      await savePhotos(placeId, files);
+    }
     e.target.value='';
     if(activeCardId===placeId) await openDetail(placeId);
     else if(!activeCardId) await openDetail(placeId);
-    // Single notification per upload (not per file)
     const p=places.find(x=>x.id===placeId);
     if(fbDb&&currentUser&&p){
       const count=files.length;
@@ -2944,12 +3003,20 @@ async function handlePhotoFile(e, placeId){
       addNotification('photo', msg, placeId).catch(console.error);
     }
   } catch(err){
-    alert('写真の保存に失敗: '+err);
+    showToast('写真の保存に失敗: '+err.message);
+    console.error('Photo upload error:',err);
   }
 }
-async function handleDeletePhoto(photoId, placeId){
+async function handleDeletePhoto(photoId, placeId, isLocal=true){
   try{
-    await deletePhoto(photoId);
+    if(isLocal){
+      await deletePhoto(photoId);
+    } else {
+      // Cloudinaryからは削除できない（署名なしpresetのため）→Firestoreのメタデータだけ削除
+      if(fbDb&&currentUser){
+        await fbDb.collection('media').doc(photoId).delete();
+      }
+    }
     if(activeCardId===placeId) await openDetail(placeId);
   } catch(err){
     alert('削除失敗: '+err);
