@@ -1620,22 +1620,24 @@ async function openInviteSheet(){
   if(!currentUser||!FB_CONFIGURED){
     showToast('ログインが必要です'); return;
   }
-  // Generate or get existing invite token
-  const uid=currentUser.uid;
-  // Check if user is owner
-  const userSnap=await getDoc(doc(fbDb,'users',uid));
-  // Generate token
-  const token=btoa(uid+':'+Date.now()).replace(/[+=\/]/g,'');
-  currentInviteToken=token;
-  const inviteUrl=window.location.href.split('?')[0]+'?invite='+token;
-  document.getElementById('inv-link-display').textContent=inviteUrl;
-  // Save token to Firestore
-  await fbDb.collection('invites').doc(token).set({
-    createdBy:uid, createdAt:firebase.firestore.FieldValue.serverTimestamp(), active:true
-  });
-  // Load members
-  await loadMembers();
-  document.getElementById('invite-sheet').classList.add('open');
+  try{
+    const uid=currentUser.uid;
+    // Generate token
+    const token=btoa(uid+':'+Date.now()).replace(/[+=\/]/g,'');
+    currentInviteToken=token;
+    const inviteUrl=window.location.href.split('?')[0]+'?invite='+token;
+    document.getElementById('inv-link-display').textContent=inviteUrl;
+    document.getElementById('invite-sheet').classList.add('open');
+    // Save token to Firestore
+    await fbDb.collection('invites').doc(token).set({
+      createdBy:uid, createdAt:firebase.firestore.FieldValue.serverTimestamp(), active:true
+    });
+    // Load members
+    await loadMembers();
+  } catch(e){
+    showToast('エラー: '+e.message);
+    console.error('Invite error:',e);
+  }
 }
 
 function closeInviteSheet(){
@@ -2071,9 +2073,10 @@ window.onload=async function(){
   await initDB();
   // Init Firebase (non-blocking)
   initFirebase().catch(console.error);
-  // If Firebase not configured, hide auth screen
-  if(!FB_CONFIGURED){
-    document.getElementById('auth-screen').classList.add('hidden');
+  // 招待リンクからのアクセスの場合はログイン画面を表示
+  if(getInviteToken()){
+    setAuthMode('register');
+    document.getElementById('auth-screen').classList.remove('hidden');
   }
   const key=localStorage.getItem('pb_apikey');
   if(key) initMap(key);
