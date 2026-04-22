@@ -1483,12 +1483,13 @@ async function handleAuthChange(user){
 async function loadAllCloudPlaces(){
   if(!fbDb) return;
   try{
-    // タグ設定を取得
+    // タグ設定を取得（クラウドが正）
     const tagSnap=await fbDb.collection('shared').doc('tagSettings').get();
     if(tagSnap.exists){
       const data=tagSnap.data();
-      if(data.tagColorMap) tagColorMap=Object.assign({},data.tagColorMap,tagColorMap);
-      if(data.tagMarkMap)  tagMarkMap=Object.assign({},data.tagMarkMap,tagMarkMap);
+      // クラウドを基本として、ローカルにしかないタグは追加
+      if(data.tagColorMap) tagColorMap=Object.assign({},tagColorMap,data.tagColorMap);
+      if(data.tagMarkMap)  tagMarkMap=Object.assign({},tagMarkMap,data.tagMarkMap);
       localStorage.setItem('pb_tagcolors',JSON.stringify(tagColorMap));
       localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
     }
@@ -1746,11 +1747,25 @@ function startRealtimeListeners(){
     if(!snap.exists) return;
     const data=snap.data();
     if(data.updatedBy===currentUser.uid) return; // 自分の更新は無視
-    if(data.tagColorMap) tagColorMap=Object.assign({},data.tagColorMap,tagColorMap);
-    if(data.tagMarkMap)  tagMarkMap=Object.assign({},data.tagMarkMap,tagMarkMap);
+    // クラウドを正として完全に上書き（削除も反映）
+    if(data.tagColorMap) tagColorMap=Object.assign({},tagColorMap,data.tagColorMap);
+    if(data.tagMarkMap)  tagMarkMap=Object.assign({},tagMarkMap,data.tagMarkMap);
+    // クラウドにないタグをローカルから削除（削除の共有）
+    if(data.tagColorMap){
+      Object.keys(tagColorMap).forEach(t=>{
+        if(!(t in data.tagColorMap)) delete tagColorMap[t];
+      });
+    }
+    if(data.tagMarkMap){
+      Object.keys(tagMarkMap).forEach(t=>{
+        if(!(t in data.tagMarkMap)) delete tagMarkMap[t];
+      });
+    }
     localStorage.setItem('pb_tagcolors',JSON.stringify(tagColorMap));
     localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
     renderAll();
+    if(currentTab==='tag') renderTagView();
+    showToast('タグ設定が更新されました');
   });
 }
 
