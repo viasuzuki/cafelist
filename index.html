@@ -1021,8 +1021,6 @@ textarea.mfield{resize:none;height:70px;font-size:12px}
 </style>
 
 <!-- Firebase v8 via jsDelivr CDN -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-firestore.js"></script>
@@ -2598,6 +2596,7 @@ function buildPlace(item,d){
     id:'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     tags:[],note:'',
     addedAt:Date.now(),
+    googlePlaceId: item.place_id||null, // 写真URL更新用
     name:d?d.name:item.name,
     address:d?d.formatted_address:item.address,
     lat:item.lat,lng:item.lng,
@@ -2610,6 +2609,7 @@ function buildPlace(item,d){
     hours:d&&d.opening_hours?d.opening_hours.weekday_text:null,
     isOpen:d&&d.opening_hours?d.opening_hours.isOpen():null,
     photos:d&&d.photos?d.photos.slice(0,4).map(ph=>ph.getUrl({maxWidth:600})):[],
+    photosRefreshedAt:Date.now(),
     reviews:d&&d.reviews?d.reviews.slice(0,3).map(r=>({author:r.author_name,rating:r.rating,text:r.text})):[],
   };
 }
@@ -2620,12 +2620,38 @@ function pushPlace(p){
   if(gmap&&p.lat)addMarker(p);
   flyTo(p);openDetail(p.id);
   switchTab('map');
-  // Firebaseにも保存
   if(fbDb&&currentUser){
     syncPlaceToCloud(p).catch(console.error);
     const name=getNickname();
     addNotification('add',`${name}が「${p.name}」を追加しました`,p.id).catch(console.error);
   }
+}
+
+// Google写真URLを自動更新（24時間以上経過したら再取得）
+const PHOTO_TTL = 24 * 60 * 60 * 1000; // 24時間
+function refreshGooglePhotos(p){
+  if(!placesService) return;
+  if(!p.googlePlaceId) return;
+  const age = Date.now() - (p.photosRefreshedAt||0);
+  if(age < PHOTO_TTL) return; // まだ新鮮
+  placesService.getDetails({
+    placeId: p.googlePlaceId,
+    fields:['photos','opening_hours']
+  }, (res, status)=>{
+    if(status!==google.maps.places.PlacesServiceStatus.OK||!res) return;
+    if(res.photos&&res.photos.length){
+      p.photos = res.photos.slice(0,4).map(ph=>ph.getUrl({maxWidth:600}));
+    }
+    if(res.opening_hours){
+      p.isOpen = res.opening_hours.isOpen();
+      p.hours = res.opening_hours.weekday_text;
+    }
+    p.photosRefreshedAt = Date.now();
+    save();
+    // 詳細シートが開いていたら再描画
+    if(activeCardId===p.id) openDetail(p.id);
+    if(fbDb&&currentUser) syncPlaceToCloud(p).catch(console.error);
+  });
 }
 
 function closeDropdown(){
@@ -2831,6 +2857,8 @@ async function openDetail(id){
   if(tagBtn) tagBtn.style.display='flex';
   if(saveBtn) saveBtn.style.display='none';
   if(delBtn) delBtn.style.display='flex';
+  // Google写真URLを非同期で更新（期限切れなら再取得後に自動再描画）
+  refreshGooglePhotos(p);
   await _renderDetailContent(p, false);
   document.getElementById('detail-sheet').classList.add('open');
 }
