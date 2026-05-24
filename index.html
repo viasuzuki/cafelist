@@ -2290,7 +2290,8 @@ function initMap(key){
   if(window.google&&window.google.maps){setupMap();return}
   const s=document.createElement('script');
   s.src=`https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=ja&callback=setupMap`;
-  s.onerror=()=>alert('APIキーが無効か、APIが有効化されていません');
+  s.async=true;
+  s.onerror=()=>showToast('地図の読み込みに失敗しました');
   document.head.appendChild(s);
 }
 window.setupMap=function(){
@@ -2303,8 +2304,10 @@ window.setupMap=function(){
   });
   placesService=new google.maps.places.PlacesService(gmap);
   const hint=document.getElementById('map-hint');
-  hint.textContent='検索して場所を追加できます';
-  setTimeout(()=>hint.classList.add('hide'),3500);
+  if(hint){
+    hint.textContent='検索して場所を追加できます';
+    setTimeout(()=>hint.classList.add('hide'),3500);
+  }
   const keyBtn=document.getElementById('key-btn');
   if(keyBtn) keyBtn.classList.add('ok');
   places.forEach(p=>{if(p.lat)addMarker(p)});
@@ -2312,7 +2315,7 @@ window.setupMap=function(){
   // POIマーカークリックで保存シートを開く
   gmap.addListener('click', e=>{
     if(e.placeId){
-      e.stop(); // デフォルトのGoogle情報パネルを抑制
+      e.stop();
       openPoiSaveSheet(e.placeId, e.latLng);
     }
   });
