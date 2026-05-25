@@ -1739,18 +1739,20 @@ function startRealtimeListeners(){
   if(placesUnsubscribe) placesUnsubscribe();
   placesUnsubscribe=fbDb.collection('places').onSnapshot(snap=>{
     const cloudPlaces=[];
-    snap.forEach(d=>cloudPlaces.push({...d.data(),id:d.id}));
+    snap.docChanges().forEach(change=>{
+      if(change.type==='added'||change.type==='modified'){
+        cloudPlaces.push({...change.doc.data(),id:change.doc.id});
+      }
+    });
     if(cloudPlaces.length>0) mergeCloudPlaces(cloudPlaces);
   });
   // タグ設定のリアルタイム同期
   fbDb.collection('shared').doc('tagSettings').onSnapshot(snap=>{
     if(!snap.exists) return;
     const data=snap.data();
-    if(data.updatedBy===currentUser.uid) return; // 自分の更新は無視
-    // クラウドを正として完全に上書き（削除も反映）
+    if(data.updatedBy===currentUser.uid) return;
     if(data.tagColorMap) tagColorMap=Object.assign({},tagColorMap,data.tagColorMap);
     if(data.tagMarkMap)  tagMarkMap=Object.assign({},tagMarkMap,data.tagMarkMap);
-    // クラウドにないタグをローカルから削除（削除の共有）
     if(data.tagColorMap){
       Object.keys(tagColorMap).forEach(t=>{
         if(!(t in data.tagColorMap)) delete tagColorMap[t];
@@ -1765,9 +1767,20 @@ function startRealtimeListeners(){
     localStorage.setItem('pb_tagmarks',JSON.stringify(tagMarkMap));
     renderAll();
     if(currentTab==='tag') renderTagView();
-    // マーカーの色を再描画
     if(gmap) places.forEach(p=>{if(p.lat)addMarker(p)});
     showToast('タグ設定が更新されました');
+  });
+  // 写真のリアルタイム同期
+  fbDb.collection('media').onSnapshot(snap=>{
+    snap.docChanges().forEach(change=>{
+      if(change.type==='added'){
+        const data={id:change.doc.id,...change.doc.data()};
+        // 詳細シートが開いていてその店舗の写真なら再描画
+        if(activeCardId&&data.placeId===activeCardId&&data.uploadedBy!==currentUser?.uid){
+          openDetail(activeCardId);
+        }
+      }
+    });
   });
 }
 
@@ -1780,21 +1793,19 @@ function mergeCloudPlaces(cloudPlaces){
       places.unshift(cp);
       changed=true;
     } else {
-      // 既存の更新（タグ・メモ等をクラウドで上書き）
-      const local=places[idx];
-      const cloudUpdated=(cp.updatedAt?.seconds||0);
-      const localUpdated=(local.updatedAt?.seconds||0);
-      if(cloudUpdated>localUpdated){
-        places[idx]={...local,...cp};
+      // 他ユーザーの更新は常に受け入れる（自分の更新はFirestoreが最新）
+      const isOwnPlace=(cp.updatedBy===currentUser?.uid||cp.addedBy===currentUser?.uid);
+      const cloudTime=(cp.updatedAt?.seconds||cp.addedAt/1000||0);
+      const localTime=(places[idx].updatedAt?.seconds||places[idx].addedAt/1000||0);
+      if(!isOwnPlace || cloudTime>localTime){
+        places[idx]={...places[idx],...cp};
         changed=true;
       }
     }
   });
   if(changed){
-    save(); renderAll();
-    if(gmap) places.forEach(p=>{
-      if(p.lat) addMarker(p); // 色も含めて再描画
-    });
+    save();renderAll();
+    if(gmap) places.forEach(p=>{if(p.lat)addMarker(p)});
   }
 }
 
@@ -1848,18 +1859,34 @@ function renderNotifList(){
   }).join('');
 }
 
-function notifClick(notifId, placeId){
-  // Mark as read
+async function notifClick(notifId, placeId){
+  // 既読にする
   if(!readNotifIds.includes(notifId)){
     readNotifIds.push(notifId);
     localStorage.setItem('pb_read_notifs',JSON.stringify(readNotifIds));
     updateNotifBadge();
     renderNotifList();
   }
-  // Navigate to place if applicable
-  if(placeId){
-    const p=places.find(x=>x.id===placeId);
-    if(p){ switchTab('map'); setTimeout(()=>{flyTo(p);openDetail(placeId);},300); }
+  // 店舗に飛ぶ
+  if(!placeId) return;
+  let p=places.find(x=>x.id===placeId);
+  if(!p && fbDb){
+    // まだローカルにない場合はFirestoreから取得
+    try{
+      showToast('読み込み中...', 2000);
+      const snap=await fbDb.collection('places').doc(placeId).get();
+      if(snap.exists){
+        const cp={...snap.data(),id:snap.id};
+        places.unshift(cp);
+        save();renderAll();
+        if(gmap&&cp.lat)addMarker(cp);
+        p=cp;
+      }
+    } catch(e){ console.error('Place fetch error:',e); }
+  }
+  if(p){
+    switchTab('map');
+    setTimeout(()=>{flyTo(p);openDetail(placeId);},300);
   }
 }
 
@@ -1901,11 +1928,12 @@ async function syncPlaceToCloud(p){
   if(!fbDb||!currentUser) return;
   try{
     const now=Date.now();
-    p.updatedAt={seconds:Math.floor(now/1000)}; // ローカルにも記録
+    p.updatedAt={seconds:Math.floor(now/1000)};
     await fbDb.collection('places').doc(p.id).set({
       ...p, photos:[],
       updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
       updatedBy:currentUser.uid,
+      addedBy:p.addedBy||currentUser.uid,
     },{merge:true});
   } catch(e){ console.error('Sync error:',e); }
 }
